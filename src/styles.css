@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-neutral-950 text-neutral-100 antialiased;
+  overscroll-behavior: none;
+}
+
+/* iOS에서 input 포커스 시 자동 줌 방지 */
+@media (max-width: 640px) {
+  textarea,
+  input {
+    font-size: 16px;
+  }
+}

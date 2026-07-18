@@ -1,0 +1,121 @@
+import { useSyncExternalStore } from "react";
+import type { ClientCommand, ServerEvent, UISnapshot } from "../../shared/protocol";
+
+export interface ActiveTool {
+  toolCallId: string;
+  toolName: string;
+}
+
+export interface ChatState {
+  connected: boolean;
+  snapshot: UISnapshot | null;
+  /** 현재 스트리밍 중인 assistant 텍스트 (아직 snapshot에 없음) */
+  streamText: string;
+  streamThinking: string;
+  activeTools: ActiveTool[];
+}
+
+const initialState: ChatState = {
+  connected: false,
+  snapshot: null,
+  streamText: "",
+  streamThinking: "",
+  activeTools: [],
+};
+
+class ChatClient {
+  private ws: WebSocket | null = null;
+  private listeners = new Set<() => void>();
+  private reconnectDelay = 500;
+  state: ChatState = initialState;
+
+  connect() {
+    if (this.ws) return;
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    const ws = new WebSocket(`${proto}://${location.host}/ws`);
+    this.ws = ws;
+
+    ws.onopen = () => {
+      this.reconnectDelay = 500;
+      this.update({ connected: true });
+    };
+    ws.onmessage = (e) => {
+      try {
+        this.handle(JSON.parse(e.data) as ServerEvent);
+      } catch {
+        /* ignore */
+      }
+    };
+    ws.onclose = () => {
+      this.ws = null;
+      this.update({ connected: false });
+      setTimeout(() => this.connect(), this.reconnectDelay);
+      this.reconnectDelay = Math.min(this.reconnectDelay * 2, 10_000);
+    };
+    ws.onerror = () => ws.close();
+  }
+
+  send(cmd: ClientCommand) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(cmd));
+    }
+  }
+
+  private handle(event: ServerEvent) {
+    switch (event.type) {
+      case "snapshot":
+        // 완결된 메시지가 snapshot에 반영되므로 스트림 버퍼는 비운다
+        this.update({ snapshot: event.snapshot, streamText: "", streamThinking: "" });
+        break;
+      case "delta":
+        if (event.kind === "text") {
+          this.update({ streamText: this.state.streamText + event.delta });
+        } else {
+          this.update({ streamThinking: this.state.streamThinking + event.delta });
+        }
+        break;
+      case "tool_start":
+        this.update({
+          activeTools: [
+            ...this.state.activeTools,
+            { toolCallId: event.toolCallId, toolName: event.toolName },
+          ],
+        });
+        break;
+      case "tool_end":
+        this.update({
+          activeTools: this.state.activeTools.filter((t) => t.toolCallId !== event.toolCallId),
+        });
+        break;
+      case "agent_start":
+        this.update({
+          snapshot: this.state.snapshot ? { ...this.state.snapshot, isStreaming: true } : null,
+        });
+        break;
+      case "agent_end":
+        this.update({ activeTools: [], streamText: "", streamThinking: "" });
+        break;
+      case "error":
+        console.error("[pi-web]", event.message);
+        break;
+    }
+  }
+
+  private update(partial: Partial<ChatState>) {
+    this.state = { ...this.state, ...partial };
+    for (const l of this.listeners) l();
+  }
+
+  subscribe = (listener: () => void) => {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  };
+
+  getSnapshot = () => this.state;
+}
+
+export const chatClient = new ChatClient();
+
+export function useChat(): ChatState {
+  return useSyncExternalStore(chatClient.subscribe, chatClient.getSnapshot);
+}
