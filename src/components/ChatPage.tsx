@@ -8,11 +8,37 @@ import { SessionsDrawer, SessionsSidebar } from "./SessionsDrawer";
 import { SettingsMenu } from "./SettingsMenu";
 import { ThinkingMenu } from "./ThinkingMenu";
 
+function connectionDotClass(connection: "connecting" | "connected" | "disconnected"): string {
+  switch (connection) {
+    case "connected":
+      return "bg-emerald-500";
+    case "connecting":
+      return "bg-amber-400 animate-pulse";
+    case "disconnected":
+      return "bg-red-500";
+  }
+}
+
+function connectionLabel(
+  connection: "connecting" | "connected" | "disconnected",
+  t: ReturnType<typeof useT>,
+): string {
+  switch (connection) {
+    case "connected":
+      return t("connected");
+    case "connecting":
+      return t("connecting");
+    case "disconnected":
+      return t("disconnected");
+  }
+}
+
 export function ChatPage() {
   const t = useT();
-  const { connected, snapshot, streamText, streamThinking, activeTools } = useChat();
+  const { connection, snapshot, streamText, streamThinking, activeTools } = useChat();
   const isStreaming = snapshot?.isStreaming ?? false;
   const sidebarPinned = useSidebarPinned();
+  const showConnectingOverlay = connection !== "connected" && !snapshot;
 
   return (
     <div className="flex h-dvh">
@@ -24,8 +50,9 @@ export function ChatPage() {
           <div className="flex items-center gap-2">
             <span className="text-lg font-semibold">π</span>
             <span
-              className={`size-2 rounded-full ${connected ? "bg-emerald-500" : "bg-red-500"}`}
-              title={connected ? t("connected") : t("disconnected")}
+              className={`size-2 rounded-full ${connectionDotClass(connection)}`}
+              title={connectionLabel(connection, t)}
+              aria-label={connectionLabel(connection, t)}
             />
           </div>
           <div className="flex-1" />
@@ -37,15 +64,28 @@ export function ChatPage() {
           <SettingsMenu />
         </header>
 
-        <MessageList
-          messages={snapshot?.messages ?? []}
-          streamText={streamText}
-          streamThinking={streamThinking}
-          activeTools={activeTools}
-          isStreaming={isStreaming}
-        />
-
-        <Composer isStreaming={isStreaming} />
+        {showConnectingOverlay ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+            <span
+              className={`size-2.5 rounded-full ${connectionDotClass(connection)}`}
+              aria-hidden
+            />
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              {connection === "disconnected" ? t("connectionLost") : t("connectingHint")}
+            </p>
+          </div>
+        ) : (
+          <>
+            <MessageList
+              messages={snapshot?.messages ?? []}
+              streamText={streamText}
+              streamThinking={streamThinking}
+              activeTools={activeTools}
+              isStreaming={isStreaming}
+            />
+            <Composer isStreaming={isStreaming} />
+          </>
+        )}
       </div>
     </div>
   );

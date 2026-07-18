@@ -6,8 +6,11 @@ export interface ActiveTool {
   toolName: string;
 }
 
+/** WS lifecycle for chrome status (avoid red flash on first paint). */
+export type ConnectionStatus = "connecting" | "connected" | "disconnected";
+
 export interface ChatState {
-  connected: boolean;
+  connection: ConnectionStatus;
   snapshot: UISnapshot | null;
   /** 현재 스트리밍 중인 assistant 텍스트 (아직 snapshot에 없음) */
   streamText: string;
@@ -20,7 +23,7 @@ export interface ChatState {
 }
 
 const initialState: ChatState = {
-  connected: false,
+  connection: "connecting",
   snapshot: null,
   streamText: "",
   streamThinking: "",
@@ -32,18 +35,28 @@ const initialState: ChatState = {
 class ChatClient {
   private ws: WebSocket | null = null;
   private listeners = new Set<() => void>();
-  private reconnectDelay = 500;
+  private reconnectDelay = 400;
+  private intentionalClose = false;
+  /** After a drop, stay on "connecting" briefly before showing disconnected. */
+  private disconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private everConnected = false;
   state: ChatState = initialState;
 
   connect() {
-    if (this.ws) return;
+    if (this.ws || this.intentionalClose) return;
+    if (this.state.connection === "disconnected") {
+      this.update({ connection: "connecting" });
+    }
+
     const proto = location.protocol === "https:" ? "wss" : "ws";
     const ws = new WebSocket(`${proto}://${location.host}/ws`);
     this.ws = ws;
 
     ws.onopen = () => {
-      this.reconnectDelay = 500;
-      this.update({ connected: true });
+      this.clearDisconnectTimer();
+      this.reconnectDelay = 400;
+      this.everConnected = true;
+      this.update({ connection: "connected" });
     };
     ws.onmessage = (e) => {
       try {
@@ -54,9 +67,15 @@ class ChatClient {
     };
     ws.onclose = () => {
       this.ws = null;
-      this.update({ connected: false });
+      if (this.intentionalClose) return;
+
+      // Soft state while retrying — don't flash red on first paint / brief blips.
+      if (this.state.connection === "connected") {
+        this.update({ connection: "connecting" });
+      }
+      this.scheduleDisconnected();
       setTimeout(() => this.connect(), this.reconnectDelay);
-      this.reconnectDelay = Math.min(this.reconnectDelay * 2, 10_000);
+      this.reconnectDelay = Math.min(Math.round(this.reconnectDelay * 1.6), 8_000);
     };
     ws.onerror = () => ws.close();
   }
@@ -64,6 +83,23 @@ class ChatClient {
   send(cmd: ClientCommand) {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(cmd));
+    }
+  }
+
+  private scheduleDisconnected() {
+    this.clearDisconnectTimer();
+    // First load: wait longer before red. After a live session drop: faster.
+    const graceMs = this.everConnected ? 1_200 : 4_000;
+    this.disconnectTimer = setTimeout(() => {
+      if (this.ws?.readyState === WebSocket.OPEN) return;
+      this.update({ connection: "disconnected" });
+    }, graceMs);
+  }
+
+  private clearDisconnectTimer() {
+    if (this.disconnectTimer !== null) {
+      clearTimeout(this.disconnectTimer);
+      this.disconnectTimer = null;
     }
   }
 

@@ -269,6 +269,16 @@ const httpServer = createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", "http://localhost");
 
   try {
+    // Lightweight readiness probe (used by `pi --web` before opening the browser).
+    if (url.pathname === "/api/health") {
+      res.writeHead(200, {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+      });
+      res.end(JSON.stringify({ ok: true }));
+      return;
+    }
+
     if (url.pathname === "/api/sessions") {
       const sessions = await SessionManager.list(AGENT_CWD);
       const list: UISessionInfo[] = sessions

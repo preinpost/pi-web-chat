@@ -3,6 +3,9 @@ import type { Messages } from "./en";
 /** 简体中文 */
 export const zh: Messages = {
   connected: "已连接",
+  connecting: "连接中…",
+  connectingHint: "正在连接 pi…",
+  connectionLost: "无法连接服务器，正在重试…",
   disconnected: "已断开",
   settings: "设置",
   theme: "主题",

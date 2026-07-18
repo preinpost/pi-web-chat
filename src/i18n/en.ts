@@ -1,6 +1,9 @@
 export type Messages = {
   // common / chrome
   connected: string;
+  connecting: string;
+  connectingHint: string;
+  connectionLost: string;
   disconnected: string;
   settings: string;
   theme: string;
@@ -66,6 +69,9 @@ export type Messages = {
 
 export const en: Messages = {
   connected: "Connected",
+  connecting: "Connecting…",
+  connectingHint: "Connecting to pi…",
+  connectionLost: "Can't reach the server. Retrying…",
   disconnected: "Disconnected",
   settings: "Settings",
   theme: "Theme",

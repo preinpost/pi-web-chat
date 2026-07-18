@@ -5,7 +5,7 @@
  * - `/web`      → start | stop | status | <port> [--host <addr>|--lan] inside a normal pi session
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -176,6 +176,102 @@ function openBrowser(url: string): void {
     spawn(cmd, args, { detached: true, stdio: "ignore" }).unref();
   } catch {
     /* optional */
+  }
+}
+
+function isProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Host used for local readiness probes (wildcard binds → loopback). */
+function probeHost(host: string): string {
+  if (host === "0.0.0.0" || host === "::" || host === "[::]" || host === "localhost") {
+    return "127.0.0.1";
+  }
+  if (host.startsWith("[") && host.endsWith("]")) return host.slice(1, -1);
+  return host;
+}
+
+/**
+ * Block until the daemon serves /api/health (or the process dies / timeout).
+ * Implemented via a short-lived Node child so the extension factory can stay
+ * synchronous and exit before the pi TUI starts.
+ */
+function waitForServerReady(
+  port: string,
+  host: string,
+  pid: number,
+  timeoutMs = 45_000,
+): { ok: true } | { ok: false; error: string } {
+  const probe = probeHost(host);
+  // Inline waiter keeps the package free of extra bin files.
+  const waiter = `
+const port = process.argv[1];
+const host = process.argv[2];
+const pid = Number(process.argv[3]);
+const timeoutMs = Number(process.argv[4]);
+const healthUrl = "http://" + (host.includes(":") ? "[" + host + "]" : host) + ":" + port + "/api/health";
+const started = Date.now();
+function alive() {
+  try { process.kill(pid, 0); return true; } catch { return false; }
+}
+function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+(async () => {
+  let last = "not ready";
+  while (Date.now() - started < timeoutMs) {
+    if (!alive()) {
+      process.stderr.write("dead");
+      process.exit(2);
+    }
+    try {
+      const res = await fetch(healthUrl, { signal: AbortSignal.timeout(1000) });
+      if (res.ok) process.exit(0);
+      last = "HTTP " + res.status;
+    } catch (err) {
+      last = err && err.message ? err.message : String(err);
+    }
+    await sleep(150);
+  }
+  process.stderr.write(last);
+  process.exit(1);
+})();
+`;
+
+  try {
+    execFileSync(
+      process.execPath,
+      ["--input-type=module", "-e", waiter, port, probe, String(pid), String(timeoutMs)],
+      {
+        encoding: "utf8",
+        stdio: ["ignore", "ignore", "pipe"],
+        timeout: timeoutMs + 5_000,
+      },
+    );
+    return { ok: true };
+  } catch (err) {
+    const e = err as {
+      status?: number | null;
+      stderr?: string;
+      signal?: string | null;
+      message?: string;
+    };
+    if (e.status === 2 || !isProcessAlive(pid)) {
+      clearStateFiles();
+      return {
+        ok: false,
+        error: `server process exited before becoming ready (see ${LOG_FILE})`,
+      };
+    }
+    const detail = (e.stderr ?? "").trim() || e.message || "unknown error";
+    return {
+      ok: false,
+      error: `server did not become ready within ${Math.round(timeoutMs / 1000)}s (${detail})`,
+    };
   }
 }
 
@@ -353,21 +449,34 @@ function runDaemonAndExit(): void {
     process.exit(1);
   }
 
+  const url = urlFor(result.port, result.host);
   const summary = describeServer(result.port, result.host, result.pid);
+
   if (result.already) {
     console.log(`pi-web-chat already running — ${summary}`);
-  } else {
-    console.log(`pi-web-chat started — ${summary}`);
-    if (!isLoopbackHost(result.host)) {
-      console.log(
-        "  warning: bound beyond loopback with no app auth — use only on trusted networks",
-      );
-    }
-    console.log(`  stop:   pi --web stop`);
-    console.log(`  status: pi --web status`);
-    console.log(`  logs:   ${LOG_FILE}`);
-    openBrowser(urlFor(result.port, result.host));
+    openBrowser(url);
+    process.exit(0);
   }
+
+  process.stdout.write(`pi-web-chat starting (pid ${result.pid})…`);
+  const ready = waitForServerReady(result.port, result.host, result.pid);
+  if (!ready.ok) {
+    process.stdout.write("\n");
+    console.error(`pi-web-chat: ${ready.error}`);
+    process.exit(1);
+  }
+  process.stdout.write(" ready\n");
+
+  console.log(`pi-web-chat started — ${summary}`);
+  if (!isLoopbackHost(result.host)) {
+    console.log(
+      "  warning: bound beyond loopback with no app auth — use only on trusted networks",
+    );
+  }
+  console.log(`  stop:   pi --web stop`);
+  console.log(`  status: pi --web status`);
+  console.log(`  logs:   ${LOG_FILE}`);
+  openBrowser(url);
   // Detached server keeps running; do not open pi TUI.
   process.exit(0);
 }
@@ -394,6 +503,7 @@ export default function (pi: ExtensionAPI) {
 
   // Handle --web as early as possible during extension load, before TUI starts.
   // getFlag() is not populated yet at factory time, so read argv directly.
+  // waitForServerReady is synchronous so we exit only after the daemon is up.
   if (parseWebDaemonArgs().enabled) {
     runDaemonAndExit();
   }
@@ -437,6 +547,15 @@ export default function (pi: ExtensionAPI) {
       if (!result.ok) {
         ctx.ui.notify(`pi-web-chat: ${result.error}`, "error");
         return;
+      }
+
+      if (!result.already) {
+        ctx.ui.notify(`pi-web-chat starting (pid ${result.pid})…`, "info");
+        const ready = waitForServerReady(result.port, result.host, result.pid);
+        if (!ready.ok) {
+          ctx.ui.notify(`pi-web-chat: ${ready.error}`, "error");
+          return;
+        }
       }
 
       const summary = describeServer(result.port, result.host, result.pid);

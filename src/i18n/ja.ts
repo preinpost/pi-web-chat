@@ -2,6 +2,9 @@ import type { Messages } from "./en";
 
 export const ja: Messages = {
   connected: "接続済み",
+  connecting: "接続中…",
+  connectingHint: "pi に接続しています…",
+  connectionLost: "サーバーに接続できません。再試行中…",
   disconnected: "未接続",
   settings: "設定",
   theme: "テーマ",
