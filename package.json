@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "concurrently -k -n server,web \"npm:dev:server\" \"npm:dev:web\"",
     "dev:server": "tsx watch server/index.ts",
-    "dev:web": "vite",
+    "dev:web": "wait-on -t 30s tcp:3141 && vite",
     "build": "vite build",
     "start": "NODE_ENV=production tsx server/index.ts",
     "typecheck": "tsc --noEmit"
@@ -36,6 +36,7 @@
     "tailwindcss": "^4.3.3",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
-    "vite": "^7.0.0"
+    "vite": "^7.0.0",
+    "wait-on": "^9.0.10"
   }
 }
