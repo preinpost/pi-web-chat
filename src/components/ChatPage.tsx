@@ -1,4 +1,5 @@
 import { useChat } from "../lib/chat";
+import { useT } from "../lib/i18n";
 import { useSidebarPinned } from "../lib/sidebar";
 import { Composer } from "./Composer";
 import { MessageList } from "./MessageList";
@@ -8,6 +9,7 @@ import { SettingsMenu } from "./SettingsMenu";
 import { ThinkingMenu } from "./ThinkingMenu";
 
 export function ChatPage() {
+  const t = useT();
   const { connected, snapshot, streamText, streamThinking, activeTools } = useChat();
   const isStreaming = snapshot?.isStreaming ?? false;
   const sidebarPinned = useSidebarPinned();
@@ -23,7 +25,7 @@ export function ChatPage() {
             <span className="text-lg font-semibold">π</span>
             <span
               className={`size-2 rounded-full ${connected ? "bg-emerald-500" : "bg-red-500"}`}
-              title={connected ? "연결됨" : "연결 끊김"}
+              title={connected ? t("connected") : t("disconnected")}
             />
           </div>
           <div className="flex-1" />

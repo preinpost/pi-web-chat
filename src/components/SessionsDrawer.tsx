@@ -3,14 +3,15 @@ import { useEffect, useRef, useState } from "react";
 import type { UISessionInfo } from "../../shared/protocol";
 import { useInvalidateSessions, useSessions } from "../lib/api";
 import { chatClient, useChat } from "../lib/chat";
+import { localeTag, useLocale, useT } from "../lib/i18n";
 import { setSidebarPinned, useSidebarPinned } from "../lib/sidebar";
 
-function formatDate(iso: string) {
+function formatDate(iso: string, locale: string) {
   const d = new Date(iso);
   return (
-    d.toLocaleDateString("ko-KR", { month: "short", day: "numeric" }) +
+    d.toLocaleDateString(locale, { month: "short", day: "numeric" }) +
     " " +
-    d.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })
+    d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })
   );
 }
 
@@ -53,6 +54,8 @@ function SessionRow({
   active: boolean;
   onSelect: () => void;
 }) {
+  const t = useT();
+  const locale = useLocale();
   return (
     <button
       onClick={onSelect}
@@ -61,10 +64,11 @@ function SessionRow({
       }`}
     >
       <div className="truncate text-sm text-neutral-800 dark:text-neutral-200">
-        {session.name ?? session.firstMessage ?? "(빈 세션)"}
+        {session.name ?? session.firstMessage ?? t("emptySession")}
       </div>
       <div className="mt-0.5 text-xs text-neutral-500">
-        {formatDate(session.modified)} · 메시지 {session.messageCount}
+        {formatDate(session.modified, localeTag(locale))} ·{" "}
+        {t("messageCount", { count: session.messageCount })}
       </div>
     </button>
   );
@@ -114,6 +118,7 @@ function SessionsPanel({
   /** 드로어 → 고정 전환 (닫힘 애니메이션 없이) */
   onDock?: () => void;
 }) {
+  const t = useT();
   const sidebarPinned = useSidebarPinned();
   const { data: sessions, refetch } = useSessions(active);
   useSessionListSync(active);
@@ -142,16 +147,16 @@ function SessionsPanel({
       >
         <div className="flex items-center gap-2">
           {docked ? (
-            <h2 className="text-sm font-semibold">세션</h2>
+            <h2 className="text-sm font-semibold">{t("sessions")}</h2>
           ) : (
-            <Dialog.Title className="text-sm font-semibold">세션</Dialog.Title>
+            <Dialog.Title className="text-sm font-semibold">{t("sessions")}</Dialog.Title>
           )}
           {/* 데스크톱에서만 사이드바 고정 토글 */}
           <button
             type="button"
             onClick={toggleDock}
-            title={sidebarPinned ? "사이드바 고정 해제" : "사이드바 고정"}
-            aria-label={sidebarPinned ? "사이드바 고정 해제" : "사이드바 고정"}
+            title={sidebarPinned ? t("unpinSidebar") : t("pinSidebar")}
+            aria-label={sidebarPinned ? t("unpinSidebar") : t("pinSidebar")}
             aria-pressed={sidebarPinned}
             className={`hidden size-8 items-center justify-center rounded-lg transition-colors md:flex ${
               sidebarPinned
@@ -174,15 +179,15 @@ function SessionsPanel({
             }}
             className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm text-white active:bg-indigo-500"
           >
-            + 새 세션
+            {t("newSession")}
           </button>
           {docked && (
             <button
               type="button"
               onClick={() => setSidebarPinned(false)}
               className="flex size-8 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
-              aria-label="사이드바 닫기"
-              title="사이드바 닫기"
+              aria-label={t("closeSidebar")}
+              title={t("closeSidebar")}
             >
               <svg viewBox="0 0 24 24" className="size-4 fill-none stroke-current stroke-2">
                 <path d="M18 6 6 18M6 6l12 12" strokeLinecap="round" />
@@ -204,7 +209,7 @@ function SessionsPanel({
           />
         ))}
         {sessions && sessions.length === 0 && (
-          <div className="px-4 py-8 text-center text-sm text-neutral-500">저장된 세션 없음</div>
+          <div className="px-4 py-8 text-center text-sm text-neutral-500">{t("noSavedSessions")}</div>
         )}
       </div>
     </>
@@ -222,6 +227,7 @@ export function SessionsSidebar({ currentSessionFile }: { currentSessionFile?: s
 
 /** 오버레이 드로어 (모바일 / 고정 해제 상태) */
 export function SessionsDrawer({ currentSessionFile }: { currentSessionFile?: string }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   /** 핀 고정 전환 시 true → Portal을 즉시 제거해 닫힘 애니 스킵 */
   const [instantHide, setInstantHide] = useState(false);
@@ -245,7 +251,7 @@ export function SessionsDrawer({ currentSessionFile }: { currentSessionFile?: st
         className={`flex size-9 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 dark:hover:bg-neutral-900 dark:hover:text-neutral-200 ${
           sidebarPinned ? "md:hidden" : ""
         }`}
-        aria-label="세션 목록"
+        aria-label={t("sessionList")}
       >
         <MenuIcon />
       </Dialog.Trigger>

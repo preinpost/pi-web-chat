@@ -1,5 +1,6 @@
 import { Menu } from "@base-ui-components/react/menu";
 import { useState } from "react";
+import { isLocale, LOCALES, setLocale, useLocale, useT } from "../lib/i18n";
 import {
   setThemePreference,
   useThemePreference,
@@ -8,27 +9,29 @@ import {
 import { ExtensionsDialog } from "./ExtensionsDialog";
 import { ForkDialog } from "./ForkDialog";
 
-const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
-  { value: "system", label: "시스템" },
-  { value: "light", label: "라이트" },
-  { value: "dark", label: "다크" },
-];
-
 const itemClass =
   "flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-neutral-700 outline-none data-[highlighted]:bg-neutral-100 dark:text-neutral-200 dark:data-[highlighted]:bg-neutral-800";
 
 export function SettingsMenu() {
+  const t = useT();
   const preference = useThemePreference();
+  const locale = useLocale();
   const [forkOpen, setForkOpen] = useState(false);
   const [extensionsOpen, setExtensionsOpen] = useState(false);
+
+  const themeOptions: { value: ThemePreference; label: string }[] = [
+    { value: "system", label: t("themeSystem") },
+    { value: "light", label: t("themeLight") },
+    { value: "dark", label: t("themeDark") },
+  ];
 
   return (
     <>
       <Menu.Root>
         <Menu.Trigger
           className="flex size-9 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 dark:hover:bg-neutral-900 dark:hover:text-neutral-200"
-          aria-label="설정"
-          title="설정"
+          aria-label={t("settings")}
+          title={t("settings")}
         >
           <svg viewBox="0 0 24 24" className="size-5 fill-none stroke-current stroke-2">
             <circle cx="12" cy="12" r="3" />
@@ -44,7 +47,7 @@ export function SettingsMenu() {
             <Menu.Popup className="w-52 rounded-xl border border-neutral-200 bg-white py-1 shadow-2xl outline-none dark:border-neutral-800 dark:bg-neutral-900">
               <Menu.Group>
                 <Menu.GroupLabel className="px-3 pt-2 pb-1 text-[11px] font-medium tracking-wide text-neutral-400 uppercase">
-                  테마
+                  {t("theme")}
                 </Menu.GroupLabel>
                 <Menu.RadioGroup
                   value={preference}
@@ -54,7 +57,7 @@ export function SettingsMenu() {
                     }
                   }}
                 >
-                  {THEME_OPTIONS.map((opt) => (
+                  {themeOptions.map((opt) => (
                     <Menu.RadioItem
                       key={opt.value}
                       value={opt.value}
@@ -80,6 +83,42 @@ export function SettingsMenu() {
 
               <div className="my-1 border-t border-neutral-200 dark:border-neutral-800" />
 
+              <Menu.Group>
+                <Menu.GroupLabel className="px-3 pt-2 pb-1 text-[11px] font-medium tracking-wide text-neutral-400 uppercase">
+                  {t("language")}
+                </Menu.GroupLabel>
+                <Menu.RadioGroup
+                  value={locale}
+                  onValueChange={(value) => {
+                    if (isLocale(value)) setLocale(value);
+                  }}
+                >
+                  {LOCALES.map((opt) => (
+                    <Menu.RadioItem
+                      key={opt.value}
+                      value={opt.value}
+                      closeOnClick
+                      className={itemClass}
+                    >
+                      <span className="flex size-3.5 items-center justify-center rounded-full border border-neutral-400 dark:border-neutral-500">
+                        <Menu.RadioItemIndicator className="size-1.5 rounded-full bg-indigo-500" />
+                      </span>
+                      <span
+                        className={
+                          locale === opt.value
+                            ? "font-medium text-indigo-600 dark:text-indigo-400"
+                            : undefined
+                        }
+                      >
+                        {opt.nativeLabel}
+                      </span>
+                    </Menu.RadioItem>
+                  ))}
+                </Menu.RadioGroup>
+              </Menu.Group>
+
+              <div className="my-1 border-t border-neutral-200 dark:border-neutral-800" />
+
               <Menu.Item className={itemClass} onClick={() => setForkOpen(true)}>
                 <svg viewBox="0 0 24 24" className="size-4 fill-none stroke-current stroke-2">
                   <circle cx="6" cy="5" r="2" />
@@ -90,7 +129,7 @@ export function SettingsMenu() {
                     strokeLinecap="round"
                   />
                 </svg>
-                세션 포크…
+                {t("forkSessionEllipsis")}
               </Menu.Item>
 
               <Menu.Item className={itemClass} onClick={() => setExtensionsOpen(true)}>
@@ -101,7 +140,7 @@ export function SettingsMenu() {
                     strokeLinejoin="round"
                   />
                 </svg>
-                활성 확장…
+                {t("activeExtensionsEllipsis")}
               </Menu.Item>
             </Menu.Popup>
           </Menu.Positioner>

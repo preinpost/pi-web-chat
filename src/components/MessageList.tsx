@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { UIContentBlock, UIMessage } from "../../shared/protocol";
 import type { ActiveTool } from "../lib/chat";
+import { useT } from "../lib/i18n";
 import { Markdown } from "./Markdown";
 
 function ToolCallCard({ block }: { block: Extract<UIContentBlock, { type: "toolCall" }> }) {
@@ -46,6 +47,7 @@ function Thinking({ text }: { text: string }) {
 }
 
 function Blocks({ blocks, markdown }: { blocks: UIContentBlock[]; markdown: boolean }) {
+  const t = useT();
   return (
     <>
       {blocks.map((b, i) => {
@@ -67,12 +69,12 @@ function Blocks({ blocks, markdown }: { blocks: UIContentBlock[]; markdown: bool
               <img
                 key={i}
                 src={b.dataUrl}
-                alt="첨부 이미지"
+                alt={t("attachedImage")}
                 className="my-1 max-h-64 max-w-full rounded-lg"
               />
             ) : (
               <div key={i} className="text-xs opacity-60">
-                [이미지]
+                {t("imagePlaceholder")}
               </div>
             );
         }
@@ -116,6 +118,7 @@ export function MessageList({
   activeTools: ActiveTool[];
   isStreaming: boolean;
 }) {
+  const t = useT();
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
@@ -149,7 +152,7 @@ export function MessageList({
         {messages.length === 0 && !streamText && (
           <div className="mt-24 text-center text-neutral-400 dark:text-neutral-600">
             <div className="text-3xl">π</div>
-            <div className="mt-2 text-sm">무엇을 도와드릴까요?</div>
+            <div className="mt-2 text-sm">{t("emptyPrompt")}</div>
           </div>
         )}
         {messages.map((m, i) => (
@@ -161,10 +164,10 @@ export function MessageList({
             <Markdown text={streamText} />
           </div>
         )}
-        {activeTools.map((t) => (
-          <div key={t.toolCallId} className="flex items-center gap-2 text-sm text-neutral-500">
+        {activeTools.map((tool) => (
+          <div key={tool.toolCallId} className="flex items-center gap-2 text-sm text-neutral-500">
             <span className="size-2 animate-pulse rounded-full bg-amber-400" />
-            {t.toolName} 실행 중…
+            {t("toolRunning", { name: tool.toolName })}
           </div>
         ))}
         {showTyping && (

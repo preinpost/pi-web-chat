@@ -1,0 +1,61 @@
+import type { Messages } from "./en";
+
+export const ko: Messages = {
+  connected: "연결됨",
+  disconnected: "연결 끊김",
+  settings: "설정",
+  theme: "테마",
+  themeSystem: "시스템",
+  themeLight: "라이트",
+  themeDark: "다크",
+  language: "언어",
+
+  sessions: "세션",
+  newSession: "+ 새 세션",
+  emptySession: "(빈 세션)",
+  messageCount: "메시지 {count}",
+  noSavedSessions: "저장된 세션 없음",
+  sessionList: "세션 목록",
+  pinSidebar: "사이드바 고정",
+  unpinSidebar: "사이드바 고정 해제",
+  closeSidebar: "사이드바 닫기",
+
+  sendMessage: "메시지 보내기",
+  streamingPlaceholder: "스트리밍 중… (보내면 steering 됩니다)",
+  attachImage: "이미지 첨부",
+  removeImage: "이미지 제거",
+  send: "전송",
+  abort: "중단",
+
+  selectModel: "모델 선택",
+  searchModels: "모델 검색…",
+  clearSearch: "검색어 지우기",
+  noModelsAvailable: "사용 가능한 모델 없음",
+  noSearchResults: "검색 결과 없음",
+
+  forkSession: "세션 포크",
+  forkSessionEllipsis: "세션 포크…",
+  forkDescription:
+    "선택한 메시지 직전까지의 대화로 새 세션을 만듭니다. 메시지 내용은 입력창에 다시 채워집니다.",
+  emptyMessage: "(빈 메시지)",
+  noForkPoints: "포크할 유저 메시지가 없습니다",
+
+  activeExtensions: "활성 확장",
+  activeExtensionsEllipsis: "활성 확장…",
+  extensionsLoaded: "{count}개의 확장이 현재 세션에 로드되어 있습니다.",
+  extensionsLoading: "현재 세션에 로드된 확장을 불러오는 중…",
+  loadFailures: "로드 실패 {count}건",
+  noExtensionsLoaded: "로드된 확장이 없습니다",
+  scopeUser: "사용자",
+  scopeProject: "프로젝트",
+  scopeTemporary: "임시",
+  tools: "도구",
+  commands: "커맨드",
+  flags: "플래그",
+  events: "이벤트",
+
+  emptyPrompt: "무엇을 도와드릴까요?",
+  attachedImage: "첨부 이미지",
+  imagePlaceholder: "[이미지]",
+  toolRunning: "{name} 실행 중…",
+};

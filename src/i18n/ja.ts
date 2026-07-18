@@ -1,0 +1,61 @@
+import type { Messages } from "./en";
+
+export const ja: Messages = {
+  connected: "接続済み",
+  disconnected: "未接続",
+  settings: "設定",
+  theme: "テーマ",
+  themeSystem: "システム",
+  themeLight: "ライト",
+  themeDark: "ダーク",
+  language: "言語",
+
+  sessions: "セッション",
+  newSession: "+ 新しいセッション",
+  emptySession: "(空のセッション)",
+  messageCount: "メッセージ {count}",
+  noSavedSessions: "保存されたセッションはありません",
+  sessionList: "セッション一覧",
+  pinSidebar: "サイドバーを固定",
+  unpinSidebar: "サイドバーの固定を解除",
+  closeSidebar: "サイドバーを閉じる",
+
+  sendMessage: "メッセージを送信",
+  streamingPlaceholder: "ストリーミング中…（送信でステアリング）",
+  attachImage: "画像を添付",
+  removeImage: "画像を削除",
+  send: "送信",
+  abort: "停止",
+
+  selectModel: "モデルを選択",
+  searchModels: "モデルを検索…",
+  clearSearch: "検索をクリア",
+  noModelsAvailable: "利用可能なモデルがありません",
+  noSearchResults: "検索結果なし",
+
+  forkSession: "セッションをフォーク",
+  forkSessionEllipsis: "セッションをフォーク…",
+  forkDescription:
+    "選択したメッセージ直前までの会話で新しいセッションを作成します。メッセージ内容は入力欄に再入力されます。",
+  emptyMessage: "(空のメッセージ)",
+  noForkPoints: "フォークできるユーザーメッセージがありません",
+
+  activeExtensions: "有効な拡張",
+  activeExtensionsEllipsis: "有効な拡張…",
+  extensionsLoaded: "このセッションに {count} 個の拡張が読み込まれています。",
+  extensionsLoading: "このセッションの拡張を読み込み中…",
+  loadFailures: "読み込み失敗 {count} 件",
+  noExtensionsLoaded: "読み込まれた拡張はありません",
+  scopeUser: "ユーザー",
+  scopeProject: "プロジェクト",
+  scopeTemporary: "一時",
+  tools: "ツール",
+  commands: "コマンド",
+  flags: "フラグ",
+  events: "イベント",
+
+  emptyPrompt: "何をお手伝いしましょうか？",
+  attachedImage: "添付画像",
+  imagePlaceholder: "[画像]",
+  toolRunning: "{name} を実行中…",
+};

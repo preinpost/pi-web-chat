@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { UIImageAttachment } from "../../shared/protocol";
 import { chatClient, useChat } from "../lib/chat";
+import { useT } from "../lib/i18n";
 
 interface PendingImage extends UIImageAttachment {
   previewUrl: string;
@@ -19,6 +20,7 @@ async function fileToImage(file: File): Promise<PendingImage | null> {
 }
 
 export function Composer({ isStreaming }: { isStreaming: boolean }) {
+  const t = useT();
   const [text, setText] = useState("");
   const [images, setImages] = useState<PendingImage[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -72,7 +74,7 @@ export function Composer({ isStreaming }: { isStreaming: boolean }) {
                 <button
                   onClick={() => setImages((prev) => prev.filter((_, j) => j !== i))}
                   className="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full bg-neutral-700 text-xs text-white"
-                  aria-label="이미지 제거"
+                  aria-label={t("removeImage")}
                 >
                   ×
                 </button>
@@ -95,7 +97,7 @@ export function Composer({ isStreaming }: { isStreaming: boolean }) {
           <button
             onClick={() => fileInputRef.current?.click()}
             className="flex size-11 shrink-0 items-center justify-center rounded-xl text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 dark:hover:bg-neutral-900 dark:hover:text-neutral-300"
-            aria-label="이미지 첨부"
+            aria-label={t("attachImage")}
           >
             <svg viewBox="0 0 24 24" className="size-5 fill-none stroke-current stroke-2">
               <path
@@ -109,7 +111,7 @@ export function Composer({ isStreaming }: { isStreaming: boolean }) {
             ref={textareaRef}
             value={text}
             rows={1}
-            placeholder={isStreaming ? "스트리밍 중… (보내면 steering 됩니다)" : "메시지 보내기"}
+            placeholder={isStreaming ? t("streamingPlaceholder") : t("sendMessage")}
             className="composer-textarea max-h-40 flex-1 resize-none rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-[15px] leading-relaxed outline-none placeholder:text-neutral-400 focus:border-neutral-400 dark:border-neutral-800 dark:bg-neutral-900 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
             onChange={(e) => {
               setText(e.target.value);
@@ -141,7 +143,7 @@ export function Composer({ isStreaming }: { isStreaming: boolean }) {
             <button
               onClick={() => chatClient.send({ type: "abort" })}
               className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-neutral-200 text-neutral-700 active:bg-neutral-300 dark:bg-neutral-800 dark:text-neutral-300 dark:active:bg-neutral-700"
-              aria-label="중단"
+              aria-label={t("abort")}
             >
               <svg viewBox="0 0 24 24" className="size-4 fill-current">
                 <rect x="6" y="6" width="12" height="12" rx="2" />
@@ -152,7 +154,7 @@ export function Composer({ isStreaming }: { isStreaming: boolean }) {
               onClick={send}
               disabled={!text.trim() && images.length === 0}
               className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white transition-opacity disabled:opacity-30 active:bg-indigo-500"
-              aria-label="전송"
+              aria-label={t("send")}
             >
               <svg viewBox="0 0 24 24" className="size-5 fill-none stroke-current stroke-2">
                 <path d="M12 19V5M5 12l7-7 7 7" strokeLinecap="round" strokeLinejoin="round" />

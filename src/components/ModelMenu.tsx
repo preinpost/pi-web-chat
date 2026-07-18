@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { UIModel } from "../../shared/protocol";
 import { useModels } from "../lib/api";
 import { chatClient } from "../lib/chat";
+import { useT } from "../lib/i18n";
 
 function matchesQuery(model: UIModel, q: string) {
   if (!q) return true;
@@ -11,6 +12,7 @@ function matchesQuery(model: UIModel, q: string) {
 }
 
 export function ModelMenu({ current }: { current: UIModel | null }) {
+  const t = useT();
   const { data: models } = useModels();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -37,7 +39,7 @@ export function ModelMenu({ current }: { current: UIModel | null }) {
   return (
     <Menu.Root open={open} onOpenChange={setOpen}>
       <Menu.Trigger className="max-w-[40vw] truncate rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-sm text-neutral-700 hover:border-neutral-400 sm:max-w-xs dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:border-neutral-600">
-        {current ? (current.name ?? current.id) : "모델 선택"}
+        {current ? (current.name ?? current.id) : t("selectModel")}
       </Menu.Trigger>
       <Menu.Portal>
         <Menu.Positioner sideOffset={6} align="end">
@@ -56,8 +58,8 @@ export function ModelMenu({ current }: { current: UIModel | null }) {
                   ref={inputRef}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="모델 검색…"
-                  aria-label="모델 검색"
+                  placeholder={t("searchModels")}
+                  aria-label={t("searchModels")}
                   autoFocus
                   className="w-full bg-transparent py-2 text-sm text-neutral-800 outline-none placeholder:text-neutral-400 dark:text-neutral-100 dark:placeholder:text-neutral-500"
                   // 메뉴 typeahead / 화살표 네비와 충돌 방지
@@ -81,7 +83,7 @@ export function ModelMenu({ current }: { current: UIModel | null }) {
                       inputRef.current?.focus();
                     }}
                     className="shrink-0 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
-                    aria-label="검색어 지우기"
+                    aria-label={t("clearSearch")}
                   >
                     <svg viewBox="0 0 24 24" className="size-3.5 fill-none stroke-current stroke-2">
                       <path d="M18 6 6 18M6 6l12 12" strokeLinecap="round" />
@@ -113,7 +115,7 @@ export function ModelMenu({ current }: { current: UIModel | null }) {
               })}
               {filtered.length === 0 && (
                 <div className="px-3 py-6 text-center text-sm text-neutral-500">
-                  {models && models.length === 0 ? "사용 가능한 모델 없음" : "검색 결과 없음"}
+                  {models && models.length === 0 ? t("noModelsAvailable") : t("noSearchResults")}
                 </div>
               )}
             </div>

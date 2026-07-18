@@ -1,0 +1,61 @@
+import type { Messages } from "./en";
+
+/** 简体中文 */
+export const zh: Messages = {
+  connected: "已连接",
+  disconnected: "已断开",
+  settings: "设置",
+  theme: "主题",
+  themeSystem: "跟随系统",
+  themeLight: "浅色",
+  themeDark: "深色",
+  language: "语言",
+
+  sessions: "会话",
+  newSession: "+ 新建会话",
+  emptySession: "（空会话）",
+  messageCount: "{count} 条消息",
+  noSavedSessions: "没有已保存的会话",
+  sessionList: "会话列表",
+  pinSidebar: "固定侧边栏",
+  unpinSidebar: "取消固定侧边栏",
+  closeSidebar: "关闭侧边栏",
+
+  sendMessage: "发送消息",
+  streamingPlaceholder: "流式输出中…（发送可进行引导）",
+  attachImage: "附加图片",
+  removeImage: "移除图片",
+  send: "发送",
+  abort: "停止",
+
+  selectModel: "选择模型",
+  searchModels: "搜索模型…",
+  clearSearch: "清除搜索",
+  noModelsAvailable: "没有可用模型",
+  noSearchResults: "无搜索结果",
+
+  forkSession: "分叉会话",
+  forkSessionEllipsis: "分叉会话…",
+  forkDescription: "将创建截至所选消息的新会话。消息内容会重新填入输入框。",
+  emptyMessage: "（空消息）",
+  noForkPoints: "没有可分叉的用户消息",
+
+  activeExtensions: "已启用扩展",
+  activeExtensionsEllipsis: "已启用扩展…",
+  extensionsLoaded: "当前会话已加载 {count} 个扩展。",
+  extensionsLoading: "正在加载当前会话的扩展…",
+  loadFailures: "{count} 个加载失败",
+  noExtensionsLoaded: "未加载任何扩展",
+  scopeUser: "用户",
+  scopeProject: "项目",
+  scopeTemporary: "临时",
+  tools: "工具",
+  commands: "命令",
+  flags: "标志",
+  events: "事件",
+
+  emptyPrompt: "有什么可以帮您？",
+  attachedImage: "附件图片",
+  imagePlaceholder: "[图片]",
+  toolRunning: "正在运行 {name}…",
+};

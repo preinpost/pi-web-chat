@@ -1,12 +1,7 @@
 import { Dialog } from "@base-ui-components/react/dialog";
 import type { UIExtensionInfo } from "../../shared/protocol";
 import { useExtensions } from "../lib/api";
-
-const SCOPE_LABEL: Record<UIExtensionInfo["scope"], string> = {
-  user: "사용자",
-  project: "프로젝트",
-  temporary: "임시",
-};
+import { useT } from "../lib/i18n";
 
 function DetailRow({ label, items }: { label: string; items: string[] }) {
   if (items.length === 0) return null;
@@ -28,9 +23,16 @@ export function ExtensionsDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useT();
   const { data, refetch } = useExtensions(open);
   const extensions = data?.extensions ?? [];
   const errors = data?.errors ?? [];
+
+  const scopeLabel: Record<UIExtensionInfo["scope"], string> = {
+    user: t("scopeUser"),
+    project: t("scopeProject"),
+    temporary: t("scopeTemporary"),
+  };
 
   return (
     <Dialog.Root
@@ -44,11 +46,11 @@ export function ExtensionsDialog({
         <Dialog.Backdrop className="fixed inset-0 bg-black/60 transition-opacity data-[starting-style]:opacity-0 data-[ending-style]:opacity-0" />
         <Dialog.Popup className="fixed top-1/2 left-1/2 flex max-h-[75vh] w-[90vw] max-w-md -translate-x-1/2 -translate-y-1/2 flex-col rounded-2xl border border-neutral-200 bg-white shadow-2xl outline-none dark:border-neutral-800 dark:bg-neutral-900">
           <div className="border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
-            <Dialog.Title className="text-sm font-semibold">활성 확장</Dialog.Title>
+            <Dialog.Title className="text-sm font-semibold">{t("activeExtensions")}</Dialog.Title>
             <Dialog.Description className="mt-0.5 text-xs text-neutral-500">
               {data
-                ? `${extensions.length}개의 확장이 현재 세션에 로드되어 있습니다.`
-                : "현재 세션에 로드된 확장을 불러오는 중…"}
+                ? t("extensionsLoaded", { count: extensions.length })
+                : t("extensionsLoading")}
             </Dialog.Description>
           </div>
 
@@ -56,7 +58,7 @@ export function ExtensionsDialog({
             {errors.length > 0 && (
               <div className="border-b border-red-200 bg-red-50 px-4 py-3 dark:border-red-900/50 dark:bg-red-950/40">
                 <div className="text-xs font-semibold text-red-600 dark:text-red-400">
-                  로드 실패 {errors.length}건
+                  {t("loadFailures", { count: errors.length })}
                 </div>
                 {errors.map((e) => (
                   <div key={e.path} className="mt-1.5 text-[11px]">
@@ -92,22 +94,22 @@ export function ExtensionsDialog({
                           : "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400"
                     }`}
                   >
-                    {SCOPE_LABEL[ext.scope]}
+                    {scopeLabel[ext.scope]}
                   </span>
                 </div>
                 <div className="mt-0.5 truncate font-mono text-[11px] text-neutral-400 dark:text-neutral-500">
                   {ext.path}
                 </div>
-                <DetailRow label="도구" items={ext.tools} />
-                <DetailRow label="커맨드" items={ext.commands} />
-                <DetailRow label="플래그" items={ext.flags} />
-                <DetailRow label="이벤트" items={ext.events} />
+                <DetailRow label={t("tools")} items={ext.tools} />
+                <DetailRow label={t("commands")} items={ext.commands} />
+                <DetailRow label={t("flags")} items={ext.flags} />
+                <DetailRow label={t("events")} items={ext.events} />
               </div>
             ))}
 
             {data && extensions.length === 0 && (
               <div className="px-4 py-8 text-center text-sm text-neutral-500">
-                로드된 확장이 없습니다
+                {t("noExtensionsLoaded")}
               </div>
             )}
           </div>
