@@ -6,12 +6,11 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  /* JS may refine these; CSS min() already caps the dangerous bottom inset. */
+  /* Refined at runtime (capped) in lib/viewport.ts */
   --safe-top: 0px;
   --safe-bottom: 0px;
   --composer-pad-x: 0.75rem;
   --composer-pad-top: 0.5rem;
-  /* Home indicator is ~34px. Never allow more — iOS PWA can report 80-120px. */
   --composer-safe-bottom-max: 34px;
 }
 
@@ -23,8 +22,6 @@ body {
   padding: 0;
   overflow: hidden;
   overscroll-behavior: none;
-  position: fixed;
-  inset: 0;
   touch-action: manipulation;
 }
 
@@ -32,22 +29,19 @@ body {
   @apply bg-white text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-100;
 }
 
+/*
+ * App shell height:
+ *   1) 100dvh baseline
+ *   2) --app-height (visualViewport) once JS runs — the reliable value on iOS.
+ * No position:fixed on the root (can truncate content on iOS 26+).
+ */
 #root {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  height: 100dvh;
+  height: var(--app-height, 100dvh);
+  max-height: var(--app-height, 100dvh);
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
-}
-
-html.ua-keyboard #root {
-  top: var(--app-offset-top, 0px);
-  right: 0;
-  bottom: auto;
-  left: 0;
-  height: var(--app-height, 100%);
-  width: 100%;
-  inset: unset;
 }
 
 @media (max-width: 640px) {
@@ -65,10 +59,7 @@ html.ua-keyboard #root {
   display: none;
 }
 
-/*
- * Bottom padding = aesthetic floor + home-indicator, HARD-CAPPED at 34px.
- * Pure CSS so it works even if viewport JS fails or an old SW caches JS only.
- */
+/* Bottom bar: floor padding + capped home-indicator inset (never 100px+). */
 .composer-bar {
   padding-top: var(--composer-pad-top);
   padding-left: var(--composer-pad-x);

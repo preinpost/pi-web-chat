@@ -40,9 +40,9 @@ export function ChatPage() {
   const sidebarPinned = useSidebarPinned();
   const showConnectingOverlay = connection !== "connected" && !snapshot;
 
-  // fixed inset-0 → viewport directly (ignore intermediate router wrappers).
+  // #root is the flex/dvh shell; fill it (no position:fixed — iOS 26 safe).
   return (
-    <div className="fixed inset-0 flex min-h-0 w-full">
+    <div className="flex h-full min-h-0 w-full flex-1">
       {sidebarPinned && <SessionsSidebar currentSessionFile={snapshot?.sessionFile} />}
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">

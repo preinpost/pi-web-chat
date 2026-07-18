@@ -142,6 +142,11 @@ export function SettingsMenu() {
                 </svg>
                 {t("activeExtensionsEllipsis")}
               </Menu.Item>
+
+              <div className="my-1 border-t border-neutral-200 dark:border-neutral-800" />
+              <div className="px-3 pt-1 pb-2 text-[11px] text-neutral-400 dark:text-neutral-600">
+                pi-web-chat v{__APP_VERSION__}
+              </div>
             </Menu.Popup>
           </Menu.Positioner>
         </Menu.Portal>

@@ -1,11 +1,15 @@
 /**
- * iOS standalone PWAs:
- * - env(safe-area-inset-*) can report absurdly large bottoms (100px+),
- *   which shows up as a huge empty band under the composer.
- * - visualViewport height is only used while the keyboard is open.
+ * iOS PWA viewport handling (see known WebKit issues):
+ * - 100dvh in standalone can leave dead space at the bottom.
+ * - env(safe-area-inset-*) can over-report (100px+), inflating padding.
+ * - position:fixed on the root can truncate content on iOS 26+.
+ *
+ * Strategy: keep normal flex flow, but drive the shell height from
+ * visualViewport (the actual visible pixels) via --app-height, and cap
+ * the safe-area insets to sane maxima.
  */
 const SAFE_TOP_MAX = 60; // Dynamic Island / notch
-const SAFE_BOTTOM_MAX = 36; // home indicator (~34)
+const SAFE_BOTTOM_MAX = 34; // home indicator
 
 function measureEnvPadding(side: "top" | "bottom"): number {
   const el = document.createElement("div");
@@ -26,13 +30,6 @@ function measureEnvPadding(side: "top" | "bottom"): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function applySafeAreaCaps(root: HTMLElement) {
-  const top = Math.min(Math.max(measureEnvPadding("top"), 0), SAFE_TOP_MAX);
-  const bottom = Math.min(Math.max(measureEnvPadding("bottom"), 0), SAFE_BOTTOM_MAX);
-  root.style.setProperty("--safe-top", `${top}px`);
-  root.style.setProperty("--safe-bottom", `${bottom}px`);
-}
-
 export function initViewportLock() {
   const root = document.documentElement;
 
@@ -45,35 +42,32 @@ export function initViewportLock() {
 
   root.classList.toggle("ua-standalone", standalone);
 
-  const applyKeyboard = () => {
-    const vv = window.visualViewport;
-    const inner = window.innerHeight;
-    const vvHeight = vv?.height ?? inner;
-    const vvTop = vv?.offsetTop ?? 0;
-    const keyboardOpen = vvHeight < inner - 40 || vvTop > 0;
+  const applySafeAreas = () => {
+    const top = Math.min(Math.max(measureEnvPadding("top"), 0), SAFE_TOP_MAX);
+    const bottom = Math.min(Math.max(measureEnvPadding("bottom"), 0), SAFE_BOTTOM_MAX);
+    root.style.setProperty("--safe-top", `${top}px`);
+    root.style.setProperty("--safe-bottom", `${bottom}px`);
+  };
 
-    if (keyboardOpen) {
-      root.style.setProperty("--app-height", `${Math.round(vvHeight)}px`);
-      root.style.setProperty("--app-offset-top", `${Math.round(vvTop)}px`);
-      root.classList.add("ua-keyboard");
-    } else {
-      root.style.removeProperty("--app-height");
-      root.style.removeProperty("--app-offset-top");
-      root.classList.remove("ua-keyboard");
-    }
+  const applyHeight = () => {
+    const vv = window.visualViewport;
+    // Visible height = the pixels actually on screen (excludes URL bar,
+    // shrinks with keyboard). This is the most reliable app-shell height.
+    const height = Math.round(vv?.height ?? window.innerHeight);
+    root.style.setProperty("--app-height", `${height}px`);
   };
 
   const applyAll = () => {
-    applySafeAreaCaps(root);
-    applyKeyboard();
+    if (!document.body) return;
+    applySafeAreas();
+    applyHeight();
   };
 
-  // body must exist for the probe element
   if (document.body) applyAll();
   else document.addEventListener("DOMContentLoaded", applyAll, { once: true });
 
-  window.visualViewport?.addEventListener("resize", applyKeyboard);
-  window.visualViewport?.addEventListener("scroll", applyKeyboard);
+  window.visualViewport?.addEventListener("resize", applyHeight);
+  window.visualViewport?.addEventListener("scroll", applyHeight);
   window.addEventListener("resize", applyAll);
   window.addEventListener("orientationchange", () => {
     requestAnimationFrame(() => requestAnimationFrame(applyAll));
