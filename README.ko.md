@@ -23,26 +23,34 @@ pi --web
 
 pi --web status
 pi --web stop
-pi --web 3200          # 포트 지정
+pi --web 3200                # 포트 지정
+pi --web --lan               # 0.0.0.0 바인드 (LAN)
+pi --web --host 0.0.0.0      # 동일, bind 주소 명시
+pi --web 3200 --host 0.0.0.0
 ```
 
 `pi --web`은 **웹 서버 데몬만** 띄우고 즉시 종료합니다. pi TUI는 열리지 않습니다.
 이미 떠 있으면 URL만 다시 보여 줍니다.
+
+> `--lan` / `--host 0.0.0.0` 은 모든 인터페이스에 서버를 엽니다. 앱 인증이 없으니 신뢰할 수 있는 네트워크에서만 쓰세요.
 
 ### 다른 실행 방법
 
 ```bash
 # 단독 CLI (pi 세션 없이)
 pi-web-chat
+# HOST=0.0.0.0 pi-web-chat   # env로 LAN 바인드
 
 # pi 세션 안 slash command
-/web           # start (default port 3141)
-/web 3200      # port 지정
+/web                    # start (기본 포트 3141, bind 127.0.0.1)
+/web 3200               # 포트 지정
+/web --lan              # 0.0.0.0 바인드
+/web --host 0.0.0.0     # bind 주소 명시
 /web status
 /web stop
 ```
 
-상태 파일: `~/.pi/web-chat/pi-web-chat.pid`, `pi-web-chat.port`, `pi-web-chat.log`
+상태 파일: `~/.pi/web-chat/pi-web-chat.pid`, `pi-web-chat.port`, `pi-web-chat.host`, `pi-web-chat.log`
 
 > `pi install`은 production deps만 설치합니다. 프론트는 `dist/public` 빌드 산출물로 포함되므로 사용자 PC에 Vite/React가 필요 없습니다.
 
@@ -101,7 +109,7 @@ pi -e .
 ## 환경변수
 
 - `PORT`: 서버 포트 (기본 3141)
-- `HOST`: bind 주소 (기본 `127.0.0.1`). LAN 공개 시에만 `0.0.0.0` 등 사용
+- `HOST`: bind 주소 (기본 `127.0.0.1`). LAN 공개 시에만 `0.0.0.0` 등 사용. extension으로 띄울 때는 `pi --web --lan` / `pi --web --host 0.0.0.0` 권장
 - `PI_WEB_CWD`: 에이전트 작업/세션 디렉토리 (기본: `~/.pi/web-chat`, 없으면 자동 생성)
 
 인증은 pi CLI와 동일하게 `~/.pi/agent/auth.json`을 사용합니다. 먼저 `pi`를 한 번 실행해 로그인/API 키 설정이 되어 있어야 합니다.

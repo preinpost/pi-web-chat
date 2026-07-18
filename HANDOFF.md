@@ -29,13 +29,15 @@ pi --web                     # 웹 UI 데몬만 기동, TUI 안 뜸, 셸 즉시 
 pi --web status
 pi --web stop
 pi --web 3200                # 포트 지정
+pi --web --lan               # bind 0.0.0.0 (LAN)
+pi --web --host 0.0.0.0      # bind 주소 명시
 ```
 
 - 인증: pi CLI와 동일한 `~/.pi/agent/auth.json`. **pi를 먼저 설정해 둘 것**
 - `PI_WEB_CWD`: 에이전트 cwd (기본 `~/.pi/web-chat`, 없으면 자동 생성)
 - `PORT`: 서버 포트 (기본 3141)
-- `HOST`: bind 주소 (기본 `127.0.0.1`, LAN 공개 시만 `0.0.0.0`)
-- 데몬 상태 파일: `~/.pi/web-chat/pi-web-chat.pid` / `.port` / `.log`
+- `HOST`: bind 주소 (기본 `127.0.0.1`, LAN 공개 시만 `0.0.0.0`). CLI: `--lan` / `--host <addr>`
+- 데몬 상태 파일: `~/.pi/web-chat/pi-web-chat.pid` / `.port` / `.host` / `.log`
 - 모바일 개발: vite `host: true` → 같은 네트워크 `http://<맥IP>:5173`
 
 ---

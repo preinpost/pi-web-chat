@@ -23,26 +23,34 @@ pi --web
 
 pi --web status
 pi --web stop
-pi --web 3200          # custom port
+pi --web 3200                # custom port
+pi --web --lan               # bind 0.0.0.0 (LAN)
+pi --web --host 0.0.0.0      # same, explicit bind address
+pi --web 3200 --host 0.0.0.0
 ```
 
 `pi --web` starts **only the web server daemon** and exits. It does not open the pi TUI.
 If the server is already running, it prints the URL again.
+
+> `--lan` / `--host 0.0.0.0` exposes the server on all interfaces. There is no app auth — use only on trusted networks.
 
 ### Other ways to run
 
 ```bash
 # Standalone CLI (no pi session)
 pi-web-chat
+# HOST=0.0.0.0 pi-web-chat   # LAN bind via env
 
 # Inside a pi session
-/web           # start (default port 3141)
-/web 3200      # custom port
+/web                    # start (default port 3141, bind 127.0.0.1)
+/web 3200               # custom port
+/web --lan              # bind 0.0.0.0
+/web --host 0.0.0.0     # explicit bind address
 /web status
 /web stop
 ```
 
-State files: `~/.pi/web-chat/pi-web-chat.pid`, `pi-web-chat.port`, `pi-web-chat.log`
+State files: `~/.pi/web-chat/pi-web-chat.pid`, `pi-web-chat.port`, `pi-web-chat.host`, `pi-web-chat.log`
 
 > `pi install` installs production dependencies only. The frontend ships as built assets under `dist/public`, so end users do not need Vite/React installed.
 
@@ -102,7 +110,7 @@ Required secret:
 ## Environment
 
 - `PORT` — server port (default `3141`)
-- `HOST` — bind address (default `127.0.0.1`). Use `0.0.0.0` only on trusted networks
+- `HOST` — bind address (default `127.0.0.1`). Use `0.0.0.0` only on trusted networks. Prefer `pi --web --lan` / `pi --web --host 0.0.0.0` when starting via the extension
 - `PI_WEB_CWD` — agent working/session directory (default `~/.pi/web-chat`, created if missing)
 
 Auth uses the same `~/.pi/agent/auth.json` as the pi CLI. Configure pi (login / API keys) first.
