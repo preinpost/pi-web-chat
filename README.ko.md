@@ -73,18 +73,22 @@ pi install .
 
 ### GitHub Actions 릴리스
 
-repo **Actions → Release → Run workflow** 에서 bump 타입을 고릅니다.
+repo **Actions → Release → Run workflow**
 
 | input | 설명 |
 |---|---|
-| `bump` | `patch` / `minor` / `major` |
-| `publish_npm` | 태그 후 npm publish (기본 on) |
-| `dry_run` | git push 생략 + `npm publish --dry-run` (실제 배포 안 함) |
+| `mode` | `release` (bump+tag+publish) 또는 `publish-only` (현재 `package.json` 버전만 npm 배포, git bump 없음) |
+| `bump` | `patch` / `minor` / `major` (`release` 모드만) |
+| `publish_npm` | 태그 후 npm publish (`release` 모드; `publish-only`는 항상 배포) |
+| `dry_run` | git push 생략 + `npm publish --dry-run` |
 
-흐름: `npm ci` → `typecheck` → `build` → `npm pack --dry-run` → `npm version <bump>` → push commit/tag → `npm publish`
+**release**: `npm ci` → `typecheck` → `build` → pack check → `npm version <bump>` → push → `npm publish`  
+**publish-only**: `npm ci` → `typecheck` → `build` → pack check → `npm publish` (버전/태그 변경 없음)
+
+git 태그는 있는데 npm publish만 실패했을 때 `publish-only`를 쓰면 됩니다.
 
 필요 secret:
-- `NPM_TOKEN` — npm automation/publish 토큰 (`publish_npm` 사용 시)
+- `NPM_TOKEN` — npm automation/publish 토큰
 
 로컬에서 pi package 로드만 빠르게 보려면:
 

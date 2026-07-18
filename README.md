@@ -85,15 +85,19 @@ In the repo: **Actions → Release → Run workflow**
 
 | input | description |
 |---|---|
-| `bump` | `patch` / `minor` / `major` |
-| `publish_npm` | publish to npm after tagging (default on) |
+| `mode` | `release` (bump + tag + publish) or `publish-only` (current `package.json` version → npm, no git bump) |
+| `bump` | `patch` / `minor` / `major` (`release` mode only) |
+| `publish_npm` | publish to npm after tagging (`release` mode; always on for `publish-only`) |
 | `dry_run` | skip git push + `npm publish --dry-run` |
 
-Flow: `npm ci` → `typecheck` → `build` → `npm pack --dry-run` → `npm version <bump>` → push commit/tag → `npm publish`
+**release** flow: `npm ci` → `typecheck` → `build` → pack check → `npm version <bump>` → push commit/tag → `npm publish`  
+**publish-only** flow: `npm ci` → `typecheck` → `build` → pack check → `npm publish` (no version bump / no git push)
+
+Use `publish-only` when the git tag already exists but npm publish failed.
 
 Required secret:
 
-- `NPM_TOKEN` — npm automation token (when `publish_npm` is on)
+- `NPM_TOKEN` — npm automation token (publish steps)
 
 ## Environment
 
