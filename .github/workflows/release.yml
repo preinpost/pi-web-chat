@@ -116,15 +116,34 @@ jobs:
           git push origin "HEAD:${GITHUB_REF_NAME}"
           git push origin "${{ steps.meta.outputs.tag }}"
 
+      - name: Verify npm auth
+        if: ${{ inputs.mode == 'publish-only' || inputs.publish_npm }}
+        run: |
+          set -euo pipefail
+          # setup-node writes ~/.npmrc with ${NODE_AUTH_TOKEN}; fail fast if secret is wrong
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "NODE_AUTH_TOKEN is empty — check repo secret NPM_TOKEN" >&2
+            exit 1
+          fi
+          npm whoami
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Publish to npm
         if: ${{ inputs.mode == 'publish-only' || inputs.publish_npm }}
         run: |
           set -euo pipefail
           echo "Publishing pi-web-chat@${{ steps.meta.outputs.version }} (mode=${{ inputs.mode }})"
+          # Explicit auth line avoids setup-node / granular-token edge cases
+          cat > "${RUNNER_TEMP}/.npmrc-publish" <<EOF
+          //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}
+          registry=https://registry.npmjs.org/
+          always-auth=true
+          EOF
           if [ "${{ inputs.dry_run }}" = "true" ]; then
-            npm publish --dry-run --access public
+            npm publish --dry-run --access public --userconfig "${RUNNER_TEMP}/.npmrc-publish"
           else
-            npm publish --access public
+            npm publish --access public --userconfig "${RUNNER_TEMP}/.npmrc-publish"
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
