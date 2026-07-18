@@ -1,15 +1,18 @@
 /**
- * iOS PWA viewport handling (see known WebKit issues):
- * - 100dvh in standalone can leave dead space at the bottom.
- * - env(safe-area-inset-*) can over-report (100px+), inflating padding.
- * - position:fixed on the root can truncate content on iOS 26+.
+ * iOS PWA viewport handling.
  *
- * Strategy: keep normal flex flow, but drive the shell height from
- * visualViewport (the actual visible pixels) via --app-height, and cap
- * the safe-area insets to sane maxima.
+ * Problems this addresses:
+ * - 100dvh in standalone leaves dead space at the bottom.
+ * - env(safe-area-inset-*) can over-report, inflating padding.
+ * - When the keyboard opens, iOS scrolls the whole page up (composer flies
+ *   to the top, header disappears) unless the body scroll is locked.
+ *
+ * Strategy: lock body scrolling and size #root to visualViewport.height so
+ * the composer always sits just above the keyboard, with capped safe areas.
+ * #root itself is NOT position:fixed (that can truncate on iOS 26+).
  */
-const SAFE_TOP_MAX = 60; // Dynamic Island / notch
-const SAFE_BOTTOM_MAX = 34; // home indicator
+const SAFE_TOP_MAX = 60;
+const SAFE_BOTTOM_MAX = 34;
 
 function measureEnvPadding(side: "top" | "bottom"): number {
   const el = document.createElement("div");
@@ -51,10 +54,19 @@ export function initViewportLock() {
 
   const applyHeight = () => {
     const vv = window.visualViewport;
-    // Visible height = the pixels actually on screen (excludes URL bar,
-    // shrinks with keyboard). This is the most reliable app-shell height.
-    const height = Math.round(vv?.height ?? window.innerHeight);
+    const inner = window.innerHeight;
+    const height = Math.round(vv?.height ?? inner);
+    const offsetTop = Math.round(vv?.offsetTop ?? 0);
     root.style.setProperty("--app-height", `${height}px`);
+    root.style.setProperty("--app-top", `${offsetTop}px`);
+
+    // Keyboard (or other overlay) shrank the visible viewport.
+    const keyboardOpen = height < inner - 80 || offsetTop > 0;
+    root.classList.toggle("ua-keyboard", keyboardOpen);
+    if (keyboardOpen) {
+      // Counteract iOS auto-scrolling the locked page.
+      window.scrollTo(0, 0);
+    }
   };
 
   const applyAll = () => {
@@ -71,5 +83,13 @@ export function initViewportLock() {
   window.addEventListener("resize", applyAll);
   window.addEventListener("orientationchange", () => {
     requestAnimationFrame(() => requestAnimationFrame(applyAll));
+  });
+  // iOS sometimes fires focus before the viewport resizes.
+  window.addEventListener("focusin", () => {
+    requestAnimationFrame(applyHeight);
+    setTimeout(applyHeight, 300);
+  });
+  window.addEventListener("focusout", () => {
+    setTimeout(applyAll, 100);
   });
 }

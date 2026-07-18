@@ -6,7 +6,6 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  /* Refined at runtime (capped) in lib/viewport.ts */
   --safe-top: 0px;
   --safe-bottom: 0px;
   --composer-pad-x: 0.75rem;
@@ -14,6 +13,11 @@
   --composer-safe-bottom-max: 34px;
 }
 
+/*
+ * Lock the page: body is fixed to the screen so iOS can't scroll the whole
+ * app up when the keyboard opens. #root stays in normal flow (not fixed —
+ * that truncates content on iOS 26+) and is sized from visualViewport.
+ */
 html,
 body {
   width: 100%;
@@ -26,15 +30,11 @@ body {
 }
 
 body {
+  position: fixed;
+  inset: 0;
   @apply bg-white text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-100;
 }
 
-/*
- * App shell height:
- *   1) 100dvh baseline
- *   2) --app-height (visualViewport) once JS runs — the reliable value on iOS.
- * No position:fixed on the root (can truncate content on iOS 26+).
- */
 #root {
   height: 100dvh;
   height: var(--app-height, 100dvh);
@@ -59,7 +59,10 @@ body {
   display: none;
 }
 
-/* Bottom bar: floor padding + capped home-indicator inset (never 100px+). */
+/*
+ * Bottom bar: floor padding + capped home-indicator inset. When the keyboard
+ * is open there is no home indicator, so drop the safe-area entirely.
+ */
 .composer-bar {
   padding-top: var(--composer-pad-top);
   padding-left: var(--composer-pad-x);
@@ -68,6 +71,9 @@ body {
     0.5rem,
     min(var(--composer-safe-bottom-max), env(safe-area-inset-bottom, 0px))
   );
+}
+html.ua-keyboard .composer-bar {
+  padding-bottom: 0.5rem;
 }
 
 .prose pre {
