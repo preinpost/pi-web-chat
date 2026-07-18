@@ -24,6 +24,15 @@ body {
   }
 }
 
+/* Composer textarea: 스크롤은 유지하되 스크롤바는 숨김 */
+.composer-textarea {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge legacy */
+}
+.composer-textarea::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
 /* 마크다운 코드블록: 라이트/다크 공통으로 어두운 배경 (hljs github-dark 테마와 일치) */
 .prose pre {
   @apply rounded-lg border border-neutral-800 bg-[#0d1117] text-[13px];

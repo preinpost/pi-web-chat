@@ -23,7 +23,7 @@ export function Composer({ isStreaming }: { isStreaming: boolean }) {
   const [images, setImages] = useState<PendingImage[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { injectText } = useChat();
+  const { injectText, focusToken } = useChat();
 
   // fork 후 선택된 메시지 텍스트를 composer에 주입
   useEffect(() => {
@@ -33,6 +33,11 @@ export function Composer({ isStreaming }: { isStreaming: boolean }) {
       textareaRef.current?.focus();
     }
   }, [injectText]);
+
+  // 새 세션 등에서 입력창 포커스 요청
+  useEffect(() => {
+    if (focusToken > 0) textareaRef.current?.focus();
+  }, [focusToken]);
 
   const addFiles = async (files: Iterable<File>) => {
     const loaded = await Promise.all([...files].map(fileToImage));
@@ -105,7 +110,7 @@ export function Composer({ isStreaming }: { isStreaming: boolean }) {
             value={text}
             rows={1}
             placeholder={isStreaming ? "스트리밍 중… (보내면 steering 됩니다)" : "메시지 보내기"}
-            className="max-h-40 flex-1 resize-none rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-[15px] outline-none placeholder:text-neutral-400 focus:border-neutral-400 dark:border-neutral-800 dark:bg-neutral-900 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
+            className="composer-textarea max-h-40 flex-1 resize-none rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-[15px] leading-relaxed outline-none placeholder:text-neutral-400 focus:border-neutral-400 dark:border-neutral-800 dark:bg-neutral-900 dark:placeholder:text-neutral-600 dark:focus:border-neutral-600"
             onChange={(e) => {
               setText(e.target.value);
               e.target.style.height = "auto";

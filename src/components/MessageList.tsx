@@ -126,6 +126,15 @@ export function MessageList({
     }
   });
 
+  // 응답 대기 중일 때만 ... 표시 (최종 assistant 텍스트가 있으면 숨김 → 종료 후 잔상 방지)
+  const last = messages[messages.length - 1];
+  const waitingForAssistant =
+    !last ||
+    last.role === "user" ||
+    (last.role === "assistant" && last.content.some((b) => b.type === "toolCall" && b.result));
+  const showTyping =
+    isStreaming && !streamText && !streamThinking && activeTools.length === 0 && waitingForAssistant;
+
   return (
     <div
       ref={containerRef}
@@ -158,7 +167,7 @@ export function MessageList({
             {t.toolName} 실행 중…
           </div>
         ))}
-        {isStreaming && !streamText && activeTools.length === 0 && (
+        {showTyping && (
           <div className="flex items-center gap-1.5 text-neutral-400 dark:text-neutral-500">
             <span className="size-1.5 animate-bounce rounded-full bg-current [animation-delay:0ms]" />
             <span className="size-1.5 animate-bounce rounded-full bg-current [animation-delay:150ms]" />

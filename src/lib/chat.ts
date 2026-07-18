@@ -15,6 +15,8 @@ export interface ChatState {
   activeTools: ActiveTool[];
   /** fork 직후 composer에 주입할 텍스트 (소비 후 clear) */
   injectText: string | null;
+  /** 증가할 때마다 composer textarea 포커스 */
+  focusToken: number;
 }
 
 const initialState: ChatState = {
@@ -24,6 +26,7 @@ const initialState: ChatState = {
   streamThinking: "",
   activeTools: [],
   injectText: null,
+  focusToken: 0,
 };
 
 class ChatClient {
@@ -96,7 +99,15 @@ class ChatClient {
         });
         break;
       case "agent_end":
-        this.update({ activeTools: [], streamText: "", streamThinking: "" });
+        // snapshot 도착 전에도 isStreaming을 즉시 내려 로딩 점이 남지 않게 한다
+        this.update({
+          activeTools: [],
+          streamText: "",
+          streamThinking: "",
+          snapshot: this.state.snapshot
+            ? { ...this.state.snapshot, isStreaming: false }
+            : null,
+        });
         break;
       case "forked":
         if (event.selectedText) this.update({ injectText: event.selectedText });
@@ -109,6 +120,13 @@ class ChatClient {
 
   consumeInjectText() {
     if (this.state.injectText !== null) this.update({ injectText: null });
+  }
+
+  /** 드로어 닫힘 등과 겹치지 않도록 약간 늦춰 composer에 포커스 */
+  requestComposerFocus() {
+    window.setTimeout(() => {
+      this.update({ focusToken: this.state.focusToken + 1 });
+    }, 50);
   }
 
   private update(partial: Partial<ChatState>) {
