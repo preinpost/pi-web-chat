@@ -5,16 +5,15 @@
 /* class 기반 다크모드 (html.dark) */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * --safe-* are overwritten at runtime (capped) in lib/viewport.ts.
+ * Fallbacks keep SSR/first paint reasonable.
+ */
 :root {
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: 0px;
+  --safe-top: 0px;
 }
 
-/*
- * Pin document + app shell to the physical screen.
- * Avoid 100dvh / visualViewport as the default height — iOS standalone
- * often reports those short, which leaves a white band under the composer.
- */
 html,
 body {
   width: 100%;
@@ -38,25 +37,9 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
 }
 
-/*
- * React tree wrappers (router/query/etc.) must stretch to fill #root.
- * Without this, the chat column only grows to content height and the
- * leftover #root area looks like “composer bottom margin”.
- */
-#root > * {
-  flex: 1 1 auto;
-  min-height: 0;
-  min-width: 0;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Keyboard open: shrink shell to the visible visualViewport */
+/* Keyboard open: shrink #root to visualViewport */
 html.ua-keyboard #root {
   top: var(--app-offset-top, 0px);
   right: 0;
@@ -75,7 +58,6 @@ html.ua-keyboard #root {
   }
 }
 
-/* Composer textarea: 스크롤은 유지하되 스크롤바는 숨김 */
 .composer-textarea {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -84,14 +66,15 @@ html.ua-keyboard #root {
   display: none;
 }
 
-/* Bottom bar — safe-area only under the controls */
+/*
+ * Composer sits at the flex bottom. Bottom pad = small constant + capped
+ * safe-area (home indicator). Never trust raw env() which can be 100px+.
+ */
 .composer-bar {
-  padding: 0.5rem 0.75rem calc(0.5rem + var(--safe-bottom));
-}
-
-html.ua-standalone .composer-bar {
-  /* home indicator clearance only; no extra stacked min-padding */
-  padding: 0.5rem 0.75rem var(--safe-bottom);
+  padding-top: 0.5rem;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  padding-bottom: calc(0.5rem + var(--safe-bottom));
 }
 
 /* 마크다운 코드블록 */
