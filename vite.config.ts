@@ -36,6 +36,17 @@ export default defineConfig({
       workbox: {
         // API/WS는 캐시하지 않음 (빌드 에셋만 precache)
         navigateFallbackDenylist: [/^\/api\//, /^\/ws/],
+        // App shell: prefer network so iOS PWAs pick up new deploys
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === "navigate",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "pi-web-html",
+              networkTimeoutSeconds: 3,
+            },
+          },
+        ],
       },
     }),
   ],

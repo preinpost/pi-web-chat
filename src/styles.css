@@ -5,13 +5,14 @@
 /* class 기반 다크모드 (html.dark) */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/*
- * --safe-* are overwritten at runtime (capped) in lib/viewport.ts.
- * Fallbacks keep SSR/first paint reasonable.
- */
 :root {
-  --safe-bottom: 0px;
+  /* JS may refine these; CSS min() already caps the dangerous bottom inset. */
   --safe-top: 0px;
+  --safe-bottom: 0px;
+  --composer-pad-x: 0.75rem;
+  --composer-pad-top: 0.5rem;
+  /* Home indicator is ~34px. Never allow more — iOS PWA can report 80-120px. */
+  --composer-safe-bottom-max: 34px;
 }
 
 html,
@@ -39,7 +40,6 @@ body {
   overflow: hidden;
 }
 
-/* Keyboard open: shrink #root to visualViewport */
 html.ua-keyboard #root {
   top: var(--app-offset-top, 0px);
   right: 0;
@@ -50,7 +50,6 @@ html.ua-keyboard #root {
   inset: unset;
 }
 
-/* iOS에서 input 포커스 시 자동 줌 방지 */
 @media (max-width: 640px) {
   textarea,
   input {
@@ -67,17 +66,19 @@ html.ua-keyboard #root {
 }
 
 /*
- * Composer sits at the flex bottom. Bottom pad = small constant + capped
- * safe-area (home indicator). Never trust raw env() which can be 100px+.
+ * Bottom padding = aesthetic floor + home-indicator, HARD-CAPPED at 34px.
+ * Pure CSS so it works even if viewport JS fails or an old SW caches JS only.
  */
 .composer-bar {
-  padding-top: 0.5rem;
-  padding-left: 0.75rem;
-  padding-right: 0.75rem;
-  padding-bottom: calc(0.5rem + var(--safe-bottom));
+  padding-top: var(--composer-pad-top);
+  padding-left: var(--composer-pad-x);
+  padding-right: var(--composer-pad-x);
+  padding-bottom: max(
+    0.5rem,
+    min(var(--composer-safe-bottom-max), env(safe-area-inset-bottom, 0px))
+  );
 }
 
-/* 마크다운 코드블록 */
 .prose pre {
   @apply rounded-lg border border-neutral-800 bg-[#0d1117] text-[13px];
 }

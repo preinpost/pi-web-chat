@@ -37,6 +37,20 @@ mkdirSync(AGENT_CWD, { recursive: true });
 //   production package: <pkg>/dist/index.js  + <pkg>/dist/public/
 //   dev (tsx server/):  <pkg>/server/index.ts + <pkg>/dist/  (vite default) or dist/public
 const HERE = dirname(fileURLToPath(import.meta.url));
+
+function readPackageVersion(): string {
+  for (const candidate of [join(HERE, "..", "package.json"), join(HERE, "package.json")]) {
+    try {
+      if (!existsSync(candidate)) continue;
+      const v = (JSON.parse(readFileSync(candidate, "utf8")) as { version?: string }).version;
+      if (v) return v;
+    } catch {
+      /* ignore */
+    }
+  }
+  return "unknown";
+}
+const PACKAGE_VERSION = readPackageVersion();
 const DIST_DIR = (() => {
   const candidates = [
     join(HERE, "public"), // dist/index.js → dist/public
@@ -275,7 +289,7 @@ const httpServer = createServer(async (req, res) => {
         "content-type": "application/json",
         "cache-control": "no-store",
       });
-      res.end(JSON.stringify({ ok: true }));
+      res.end(JSON.stringify({ ok: true, version: PACKAGE_VERSION }));
       return;
     }
 
