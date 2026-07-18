@@ -3,7 +3,7 @@ import { useSyncExternalStore } from "react";
 export type Theme = "dark" | "light";
 export type ThemePreference = "system" | Theme;
 
-const STORAGE_KEY = "pi-web-theme";
+const STORAGE_KEY = "pi-web-chat-theme";
 const listeners = new Set<() => void>();
 
 function systemTheme(): Theme {

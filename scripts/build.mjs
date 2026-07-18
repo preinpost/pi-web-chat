@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Production build for pi-web package:
+ * Production build for pi-web-chat package:
  *   dist/public/**  — Vite frontend
  *   dist/index.js   — bundled Node server
  */

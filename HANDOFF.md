@@ -1,4 +1,4 @@
-# pi-web HANDOFF
+# pi-web-chat HANDOFF
 
 > 작성일: 2026-07-18 · 갱신: 2026-07-18 · 브랜치 `main` · 최신 커밋 `80a8fdb`
 
@@ -24,7 +24,7 @@ npm run pack:check          # build + npm pack --dry-run (배포물 확인)
 ### 사용자 설치 (pi package)
 
 ```bash
-pi install /path/to/pi-web   # 또는 git:… / npm:pi-web
+pi install /path/to/pi-web-chat   # 또는 git:… / npm:pi-web-chat
 pi --web                     # 웹 UI 데몬만 기동, TUI 안 뜸, 셸 즉시 복귀
 pi --web status
 pi --web stop
@@ -34,7 +34,8 @@ pi --web 3200                # 포트 지정
 - 인증: pi CLI와 동일한 `~/.pi/agent/auth.json`. **pi를 먼저 설정해 둘 것**
 - `PI_WEB_CWD`: 에이전트 cwd (기본 `~/.pi/web-chat`, 없으면 자동 생성)
 - `PORT`: 서버 포트 (기본 3141)
-- 데몬 상태 파일: `~/.pi/web-chat/pi-web.pid` / `.port` / `.log`
+- `HOST`: bind 주소 (기본 `127.0.0.1`, LAN 공개 시만 `0.0.0.0`)
+- 데몬 상태 파일: `~/.pi/web-chat/pi-web-chat.pid` / `.port` / `.log`
 - 모바일 개발: vite `host: true` → 같은 네트워크 `http://<맥IP>:5173`
 
 ---
@@ -42,8 +43,8 @@ pi --web 3200                # 포트 지정
 ## 2. 아키텍처
 
 ```
-pi --web / pi-web / npm start
-   │  extensions/pi-web.ts 가 detached node dist/index.js 스폰
+pi --web / pi-web-chat / npm start
+   │  extensions/pi-web-chat.ts 가 detached node dist/index.js 스폰
    ▼
 browser (React 19 + TanStack Query/Router + Base UI + Tailwind v4 + PWA)
    │  WebSocket /ws  +  HTTP /api/*
@@ -58,8 +59,8 @@ AgentSessionRuntime
 
 | 경로 | 역할 |
 |---|---|
-| `bin/pi-web.mjs` | CLI 엔트리 → `dist/index.js` |
-| `extensions/pi-web.ts` | pi package extension. `pi --web` 데몬 모드 + `/web` 커맨드 |
+| `bin/pi-web-chat.mjs` | CLI 엔트리 → `dist/index.js` |
+| `extensions/pi-web-chat.ts` | pi package extension. `pi --web` 데몬 모드 + `/web` 커맨드 |
 | `scripts/build.mjs` | vite 프론트(`dist/public`) + esbuild 서버(`dist/index.js`) |
 | `server/index.ts` | 세션 런타임, WS, HTTP API, 정적 서빙 |
 | `server/serialize.ts` | `AgentMessage[]` → `UIMessage[]` |
@@ -119,7 +120,7 @@ dist/public/**      # 프론트 + PWA sw/manifest
 - [x] pi package (`pi install`, keywords `pi-package`)
 - [x] `pi --web` / `status` / `stop` / 포트 — TUI 없이 데몬
 - [x] `/web` slash command (세션 안)
-- [x] `pi-web` bin, `npm start` → 빌드 산출물 실행
+- [x] `pi-web-chat` bin, `npm start` → 빌드 산출물 실행
 - [x] esbuild 서버 + vite `dist/public` 빌드
 - [x] 기본 chat cwd = `~/.pi/web-chat`
 
@@ -171,7 +172,7 @@ dist/public/**      # 프론트 + PWA sw/manifest
 - [x] ~~PWA~~ (a4ba58e) — 오프라인 셸/실기기 홈화면 추가는 더 다듬을 여지
 - [ ] 세션 HTML 내보내기 (`exportToHtml`) → Settings
 - [ ] compaction 상태 표시
-- [ ] 인증 레이어 — 지금은 **LAN 전용** (FS 접근 가능, 외부 노출 금지)
+- [ ] 인증 레이어 — 기본 bind `127.0.0.1`, 앱 인증 없음 (FS 접근 가능, 외부 노출 금지)
 - [ ] 다중 프로젝트 cwd 전환 (`cwdOverride`)
 
 ---
@@ -183,10 +184,10 @@ dist/public/**      # 프론트 + PWA sw/manifest
 - **일부 모델 thinking off 불가**: `thinkingLevelMap.off === null` 이면 UI에서 off 숨김이 정상
 - **iOS Safari**: safe-area/`h-dvh` 적용, 키보드 업 레이아웃은 실기기 미검증
 - **`pi --web` 과 TUI 동시 사용**: `--web`은 데몬만 띄우고 종료. 웹+TUI 같이 쓰려면
-  일반 `pi` 세션에서 `/web` 또는 별도 `pi-web`
+  일반 `pi` 세션에서 `/web` 또는 별도 `pi-web-chat`
 - **웹 서버 runtime ≠ TUI runtime**: 웹은 자체 `AgentSessionRuntime` (cwd `~/.pi/web-chat`).
   TUI 현재 프로젝트 cwd 와 세션 공간이 다를 수 있음
-- **로컬 path 패키지 표시명**: settings에 `../../dev/pi-web` 처럼 상대경로로 들어갈 수 있음
+- **로컬 path 패키지 표시명**: settings에 `../../dev/pi-web-chat` 처럼 상대경로로 들어갈 수 있음
 
 ---
 

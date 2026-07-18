@@ -13,7 +13,7 @@ export const LOCALES: { value: Locale; label: string; nativeLabel: string }[] = 
   { value: "zh", label: "Chinese", nativeLabel: "中文" },
 ];
 
-const STORAGE_KEY = "pi-web-locale";
+const STORAGE_KEY = "pi-web-chat-locale";
 const catalogs: Record<Locale, Messages> = { ko, en, ja, zh };
 const localeSet = new Set<string>(LOCALES.map((l) => l.value));
 const listeners = new Set<() => void>();

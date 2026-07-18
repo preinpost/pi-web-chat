@@ -1,9 +1,18 @@
 {
-  "name": "pi-web",
+  "name": "pi-web-chat",
   "version": "0.1.0",
   "description": "Web UI for the pi coding agent (OpenWebUI-style, mobile-friendly)",
   "type": "module",
   "license": "MIT",
+  "author": "minsoo.lee <preinpost@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/preinpost/pi-web-chat.git"
+  },
+  "homepage": "https://github.com/preinpost/pi-web-chat#readme",
+  "bugs": {
+    "url": "https://github.com/preinpost/pi-web-chat/issues"
+  },
   "keywords": [
     "pi-package",
     "pi",
@@ -12,12 +21,13 @@
     "chat"
   ],
   "bin": {
-    "pi-web": "./bin/pi-web.mjs"
+    "pi-web-chat": "bin/pi-web-chat.mjs"
   },
   "files": [
     "bin",
     "dist",
     "extensions",
+    "LICENSE",
     "README.md"
   ],
   "scripts": {
@@ -26,14 +36,14 @@
     "dev:web": "wait-on -t 30s tcp:3141 && vite",
     "build": "node scripts/build.mjs",
     "build:web": "vite build",
-    "start": "node bin/pi-web.mjs",
+    "start": "node bin/pi-web-chat.mjs",
     "typecheck": "tsc --noEmit",
     "prepack": "npm run build",
     "pack:check": "npm run build && npm pack --dry-run"
   },
   "pi": {
     "extensions": [
-      "./extensions/pi-web.ts"
+      "./extensions/pi-web-chat.ts"
     ]
   },
   "dependencies": {

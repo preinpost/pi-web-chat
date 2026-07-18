@@ -1,0 +1,116 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Semver bump type
+        required: true
+        type: choice
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
+      publish_npm:
+        description: Publish to npm after tagging
+        required: true
+        type: boolean
+        default: true
+      dry_run:
+        description: npm publish --dry-run only (no git push / no real publish)
+        required: true
+        type: boolean
+        default: false
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build · bump (${{ inputs.bump }}) · release
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Need full history so npm version / tags behave predictably
+          fetch-depth: 0
+          # Push bump commit + tag back to the same branch
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Pack check
+        run: npm pack --dry-run
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version (${{ inputs.bump }})
+        id: bump
+        run: |
+          set -euo pipefail
+          # Creates commit + annotated-style tag via npm (vX.Y.Z)
+          NEW_VERSION="$(npm version "${{ inputs.bump }}" -m "chore(release): v%s")"
+          # npm version prints e.g. v0.1.1
+          NEW_VERSION="${NEW_VERSION#v}"
+          echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Bumped to ${NEW_VERSION}"
+
+      - name: Push commit and tag
+        if: ${{ !inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin "${{ steps.bump.outputs.tag }}"
+
+      - name: Publish to npm
+        if: ${{ inputs.publish_npm }}
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            npm publish --dry-run --access public
+          else
+            npm publish --access public
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Summary
+        run: |
+          {
+            echo "## Release"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| **version** | \`${{ steps.bump.outputs.version }}\` |"
+            echo "| **tag** | \`${{ steps.bump.outputs.tag }}\` |"
+            echo "| **bump** | \`${{ inputs.bump }}\` |"
+            echo "| **npm publish** | \`${{ inputs.publish_npm }}\` |"
+            echo "| **dry_run** | \`${{ inputs.dry_run }}\` |"
+            echo "| **branch** | \`${GITHUB_REF_NAME}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"

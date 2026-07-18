@@ -1,5 +1,5 @@
 /**
- * pi-web extension
+ * pi-web-chat extension
  *
  * - `pi --web`  → start UI server daemon and exit (no TUI)
  * - `/web`      → start | stop | status | <port> inside a normal pi session
@@ -21,9 +21,9 @@ import { fileURLToPath } from "node:url";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SERVER = join(ROOT, "dist", "index.js");
 const STATE_DIR = join(homedir(), ".pi", "web-chat");
-const PID_FILE = join(STATE_DIR, "pi-web.pid");
-const PORT_FILE = join(STATE_DIR, "pi-web.port");
-const LOG_FILE = join(STATE_DIR, "pi-web.log");
+const PID_FILE = join(STATE_DIR, "pi-web-chat.pid");
+const PORT_FILE = join(STATE_DIR, "pi-web-chat.port");
+const LOG_FILE = join(STATE_DIR, "pi-web-chat.log");
 const DEFAULT_PORT = "3141";
 
 type StartResult =
@@ -68,7 +68,7 @@ function startServer(port: string): StartResult {
     return {
       ok: false,
       error:
-        "build missing (dist/index.js). Rebuild the package (`npm run build`) or reinstall pi-web.",
+        "build missing (dist/index.js). Rebuild the package (`npm run build`) or reinstall pi-web-chat.",
     };
   }
 
@@ -177,31 +177,31 @@ function runDaemonAndExit(): void {
 
   if (action === "stop") {
     const { stopped, pid } = stopServer();
-    console.log(stopped ? `pi-web stopped (pid ${pid})` : "pi-web is not running");
+    console.log(stopped ? `pi-web-chat stopped (pid ${pid})` : "pi-web-chat is not running");
     process.exit(0);
   }
 
   if (action === "status") {
     const pid = readPid();
     if (pid === null) {
-      console.log("pi-web is not running");
+      console.log("pi-web-chat is not running");
       process.exit(1);
     }
-    console.log(`pi-web running — ${urlFor(readPort())} (pid ${pid})`);
+    console.log(`pi-web-chat running — ${urlFor(readPort())} (pid ${pid})`);
     process.exit(0);
   }
 
   const result = startServer(port);
   if (!result.ok) {
-    console.error(`pi-web: ${result.error}`);
+    console.error(`pi-web-chat: ${result.error}`);
     process.exit(1);
   }
 
   const url = urlFor(result.port);
   if (result.already) {
-    console.log(`pi-web already running — ${url} (pid ${result.pid})`);
+    console.log(`pi-web-chat already running — ${url} (pid ${result.pid})`);
   } else {
-    console.log(`pi-web started — ${url} (pid ${result.pid})`);
+    console.log(`pi-web-chat started — ${url} (pid ${result.pid})`);
     console.log(`  stop:   pi --web stop`);
     console.log(`  status: pi --web status`);
     console.log(`  logs:   ${LOG_FILE}`);
@@ -213,7 +213,7 @@ function runDaemonAndExit(): void {
 
 export default function (pi: ExtensionAPI) {
   pi.registerFlag("web", {
-    description: "Start pi-web UI in background and exit (no TUI)",
+    description: "Start pi-web-chat UI in background and exit (no TUI)",
     type: "boolean",
     default: false,
   });
@@ -225,14 +225,14 @@ export default function (pi: ExtensionAPI) {
   }
 
   pi.registerCommand("web", {
-    description: "pi-web UI: /web [port] | /web stop | /web status",
+    description: "pi-web-chat UI: /web [port] | /web stop | /web status",
     handler: async (args, ctx) => {
       const trimmed = args.trim().toLowerCase();
 
       if (trimmed === "stop") {
         const { stopped, pid } = stopServer();
         ctx.ui.notify(
-          stopped ? `pi-web stopped (pid ${pid})` : "pi-web is not running",
+          stopped ? `pi-web-chat stopped (pid ${pid})` : "pi-web-chat is not running",
           "info",
         );
         return;
@@ -241,11 +241,11 @@ export default function (pi: ExtensionAPI) {
       if (trimmed === "status") {
         const pid = readPid();
         if (pid === null) {
-          ctx.ui.notify("pi-web is not running", "info");
+          ctx.ui.notify("pi-web-chat is not running", "info");
           return;
         }
         ctx.ui.notify(
-          `pi-web running — ${urlFor(readPort())} (pid ${pid})`,
+          `pi-web-chat running — ${urlFor(readPort())} (pid ${pid})`,
           "info",
         );
         return;
@@ -258,15 +258,15 @@ export default function (pi: ExtensionAPI) {
 
       const result = startServer(port);
       if (!result.ok) {
-        ctx.ui.notify(`pi-web: ${result.error}`, "error");
+        ctx.ui.notify(`pi-web-chat: ${result.error}`, "error");
         return;
       }
 
       const url = urlFor(result.port);
       ctx.ui.notify(
         result.already
-          ? `pi-web already running — ${url}`
-          : `pi-web started — ${url}`,
+          ? `pi-web-chat already running — ${url}`
+          : `pi-web-chat started — ${url}`,
         "info",
       );
     },

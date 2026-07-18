@@ -113,7 +113,7 @@ class ChatClient {
         if (event.selectedText) this.update({ injectText: event.selectedText });
         break;
       case "error":
-        console.error("[pi-web]", event.message);
+        console.error("[pi-web-chat]", event.message);
         break;
     }
   }

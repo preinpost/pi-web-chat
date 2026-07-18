@@ -1,4 +1,4 @@
-# pi-web
+# pi-web-chat
 
 pi 코딩 에이전트용 웹 UI (OpenWebUI 스타일). 모바일 지원.
 
@@ -10,14 +10,14 @@ pi 코딩 에이전트용 웹 UI (OpenWebUI 스타일). 모바일 지원.
 # 1) pi 설치 (이미 있으면 skip)
 npm i -g @earendil-works/pi-coding-agent
 
-# 2) pi-web 패키지 설치
-pi install /path/to/pi-web          # 로컬
-# pi install git:github.com/<you>/pi-web@v0.1.0
-# pi install npm:pi-web             # publish 후
+# 2) pi-web-chat 패키지 설치
+pi install /path/to/pi-web-chat     # 로컬
+# pi install git:github.com/<you>/pi-web-chat@v0.1.0
+# pi install npm:pi-web-chat        # publish 후
 
 # 3) 웹 UI만 백그라운드 기동 (TUI 안 뜸, 바로 셸 복귀)
 pi --web
-# → pi-web started — http://localhost:3141
+# → pi-web-chat started — http://localhost:3141
 
 pi --web status
 pi --web stop
@@ -31,7 +31,7 @@ pi --web 3200          # 포트 지정
 
 ```bash
 # 단독 CLI (pi 세션 없이)
-pi-web
+pi-web-chat
 
 # pi 세션 안 slash command
 /web           # start (default port 3141)
@@ -40,7 +40,7 @@ pi-web
 /web stop
 ```
 
-상태 파일: `~/.pi/web-chat/pi-web.pid`, `pi-web.port`, `pi-web.log`
+상태 파일: `~/.pi/web-chat/pi-web-chat.pid`, `pi-web-chat.port`, `pi-web-chat.log`
 
 > `pi install`은 production deps만 설치합니다. 프론트는 `dist/public` 빌드 산출물로 포함되므로 사용자 PC에 Vite/React가 필요 없습니다.
 
@@ -63,26 +63,44 @@ npm start
 
 ```bash
 npm run pack:check   # build + npm pack --dry-run
-npm pack             # pi-web-0.1.0.tgz 생성
-pi install ./pi-web-0.1.0.tgz   # tarball 경로 설치가 되면
+npm pack             # pi-web-chat-0.1.0.tgz 생성
+pi install ./pi-web-chat-0.1.0.tgz   # tarball 경로 설치가 되면
 # 또는 디렉터리 직접
 pi install .
 ```
+
+### GitHub Actions 릴리스
+
+repo **Actions → Release → Run workflow** 에서 bump 타입을 고릅니다.
+
+| input | 설명 |
+|---|---|
+| `bump` | `patch` / `minor` / `major` |
+| `publish_npm` | 태그 후 npm publish (기본 on) |
+| `dry_run` | git push 생략 + `npm publish --dry-run` (실제 배포 안 함) |
+
+흐름: `npm ci` → `typecheck` → `build` → `npm pack --dry-run` → `npm version <bump>` → push commit/tag → `npm publish`
+
+필요 secret:
+- `NPM_TOKEN` — npm automation/publish 토큰 (`publish_npm` 사용 시)
 
 로컬에서 pi package 로드만 빠르게 보려면:
 
 ```bash
 npm run build
-pi -e . 
+pi -e .
 # 세션에서 /web
 ```
 
 ## 환경변수
 
 - `PORT`: 서버 포트 (기본 3141)
+- `HOST`: bind 주소 (기본 `127.0.0.1`). LAN 공개 시에만 `0.0.0.0` 등 사용
 - `PI_WEB_CWD`: 에이전트 작업/세션 디렉토리 (기본: `~/.pi/web-chat`, 없으면 자동 생성)
 
 인증은 pi CLI와 동일하게 `~/.pi/agent/auth.json`을 사용합니다. 먼저 `pi`를 한 번 실행해 로그인/API 키 설정이 되어 있어야 합니다.
+
+> **보안**: 앱 자체 인증이 없습니다. 기본은 루프백 전용입니다. 외부/공인망에 그대로 노출하지 마세요. 원격 접근이 필요하면 Tailscale serve / SSH 터널 등을 권장합니다.
 
 ## 스택
 
@@ -92,14 +110,14 @@ pi -e .
 ## 구조
 
 ```
-bin/pi-web.mjs       CLI 엔트리 (dist/index.js 실행)
-extensions/pi-web.ts pi package extension (/web)
-scripts/build.mjs    vite 프론트 + esbuild 서버 번들
-server/              서버 소스
-shared/protocol.ts   서버/클라 공용 타입
-src/                 프론트 소스
-dist/index.js        빌드된 서버 (배포물)
-dist/public/         빌드된 프론트 (배포물)
+bin/pi-web-chat.mjs       CLI 엔트리 (dist/index.js 실행)
+extensions/pi-web-chat.ts pi package extension (/web)
+scripts/build.mjs         vite 프론트 + esbuild 서버 번들
+server/                   서버 소스
+shared/protocol.ts        서버/클라 공용 타입
+src/                      프론트 소스
+dist/index.js             빌드된 서버 (배포물)
+dist/public/              빌드된 프론트 (배포물)
 ```
 
 ## 기능

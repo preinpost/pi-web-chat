@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-const STORAGE_KEY = "pi-web:sidebar-pinned";
+const STORAGE_KEY = "pi-web-chat:sidebar-pinned";
 const listeners = new Set<() => void>();
 
 function readPinned(): boolean {

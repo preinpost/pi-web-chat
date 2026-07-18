@@ -15,8 +15,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon-64.png", "apple-touch-icon.png"],
       manifest: {
-        name: "pi web",
-        short_name: "pi web",
+        name: "pi web chat",
+        short_name: "pi chat",
         description: "pi coding agent web client",
         theme_color: "#0a0a0a",
         background_color: "#0a0a0a",

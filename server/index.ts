@@ -24,6 +24,9 @@ import type {
 import { serializeMessages } from "./serialize.ts";
 
 const PORT = Number(process.env.PORT ?? 3141);
+// Default to loopback — this server has no auth and can drive a coding agent.
+// Override with HOST=0.0.0.0 only on trusted networks.
+const HOST = process.env.HOST ?? "127.0.0.1";
 const HOME = homedir();
 // 개인 채팅 워크스페이스 (프로젝트 cwd와 분리). PI_WEB_CWD로 오버라이드 가능
 const DEFAULT_AGENT_CWD = join(HOME, ".pi", "web-chat");
@@ -395,6 +398,9 @@ wss.on("connection", (ws) => {
   ws.on("close", () => clients.delete(ws));
 });
 
-httpServer.listen(PORT, () => {
-  console.log(`pi-web server: http://localhost:${PORT}  (chat cwd: ${AGENT_CWD})`);
+httpServer.listen(PORT, HOST, () => {
+  const displayHost = HOST === "0.0.0.0" || HOST === "::" ? "localhost" : HOST;
+  console.log(
+    `pi-web-chat server: http://${displayHost}:${PORT}  (bind ${HOST}, chat cwd: ${AGENT_CWD})`,
+  );
 });
