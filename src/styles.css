@@ -5,24 +5,24 @@
 /* class 기반 다크모드 (html.dark) */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/*
- * App shell height comes from --app-height (visualViewport; see lib/viewport.ts).
- * Fixed positioning avoids iOS standalone “ghost gap” under the composer.
- */
 :root {
-  --app-height: 100dvh;
-  --app-offset-top: 0px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
 }
 
+/*
+ * Pin document + app shell to the physical screen.
+ * Avoid 100dvh / visualViewport as the default height — iOS standalone
+ * often reports those short, which leaves a white band under the composer.
+ */
 html,
 body {
   width: 100%;
   height: 100%;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
   overscroll-behavior: none;
-  /* Prevent iOS rubber-band from revealing empty page chrome */
   position: fixed;
   inset: 0;
   touch-action: manipulation;
@@ -34,14 +34,37 @@ body {
 
 #root {
   position: fixed;
-  top: var(--app-offset-top);
-  left: 0;
-  right: 0;
-  height: var(--app-height);
-  max-height: var(--app-height);
+  inset: 0;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+/*
+ * React tree wrappers (router/query/etc.) must stretch to fill #root.
+ * Without this, the chat column only grows to content height and the
+ * leftover #root area looks like “composer bottom margin”.
+ */
+#root > * {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Keyboard open: shrink shell to the visible visualViewport */
+html.ua-keyboard #root {
+  top: var(--app-offset-top, 0px);
+  right: 0;
+  bottom: auto;
+  left: 0;
+  height: var(--app-height, 100%);
+  width: 100%;
+  inset: unset;
 }
 
 /* iOS에서 input 포커스 시 자동 줌 방지 */
@@ -54,27 +77,24 @@ body {
 
 /* Composer textarea: 스크롤은 유지하되 스크롤바는 숨김 */
 .composer-textarea {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge legacy */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 .composer-textarea::-webkit-scrollbar {
-  display: none; /* Chrome/Safari */
+  display: none;
 }
 
-/* 하단 입력줄: safe-area만 확보 (추가 여백 최소화) */
+/* Bottom bar — safe-area only under the controls */
 .composer-bar {
-  padding-top: 0.5rem;
-  padding-bottom: max(0.5rem, var(--safe-bottom));
-  padding-left: 0.75rem;
-  padding-right: 0.75rem;
+  padding: 0.5rem 0.75rem calc(0.5rem + var(--safe-bottom));
 }
 
-/* standalone PWA: home indicator 여백만, 최소 0.5rem 이중 적용 느낌 줄이기 */
 html.ua-standalone .composer-bar {
-  padding-bottom: max(0.35rem, var(--safe-bottom));
+  /* home indicator clearance only; no extra stacked min-padding */
+  padding: 0.5rem 0.75rem var(--safe-bottom);
 }
 
-/* 마크다운 코드블록: 라이트/다크 공통으로 어두운 배경 (hljs github-dark 테마와 일치) */
+/* 마크다운 코드블록 */
 .prose pre {
   @apply rounded-lg border border-neutral-800 bg-[#0d1117] text-[13px];
 }

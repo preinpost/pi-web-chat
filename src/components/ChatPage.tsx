@@ -40,8 +40,10 @@ export function ChatPage() {
   const sidebarPinned = useSidebarPinned();
   const showConnectingOverlay = connection !== "connected" && !snapshot;
 
+  // absolute inset-0 → #root (position:fixed). Avoids short column + fake bottom gap
+  // when router/query wrappers don't pass height down.
   return (
-    <div className="flex h-full min-h-0 w-full flex-1">
+    <div className="absolute inset-0 flex min-h-0 w-full">
       {sidebarPinned && <SessionsSidebar currentSessionFile={snapshot?.sessionFile} />}
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
