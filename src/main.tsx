@@ -12,6 +12,7 @@ import { ChatPage } from "./components/ChatPage";
 import { chatClient } from "./lib/chat";
 import { initLocale } from "./lib/i18n";
 import { initTheme } from "./lib/theme";
+import { initViewportLock } from "./lib/viewport";
 import "./styles.css";
 
 const rootRoute = createRootRoute({
@@ -34,6 +35,7 @@ declare module "@tanstack/react-router" {
 
 const queryClient = new QueryClient();
 
+initViewportLock();
 initTheme();
 initLocale();
 chatClient.connect();

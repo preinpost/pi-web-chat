@@ -60,7 +60,7 @@ export function Composer({ isStreaming }: { isStreaming: boolean }) {
   };
 
   return (
-    <div className="shrink-0 border-t border-neutral-200 bg-white px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] dark:border-neutral-800 dark:bg-neutral-950">
+    <div className="composer-bar shrink-0 border-t border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
       <div className="mx-auto max-w-3xl">
         {images.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-2">

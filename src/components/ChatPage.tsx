@@ -41,11 +41,11 @@ export function ChatPage() {
   const showConnectingOverlay = connection !== "connected" && !snapshot;
 
   return (
-    <div className="flex h-full min-h-0 w-full">
+    <div className="flex h-full min-h-0 w-full flex-1">
       {sidebarPinned && <SessionsSidebar currentSessionFile={snapshot?.sessionFile} />}
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <header className="flex shrink-0 items-center gap-1.5 border-b border-neutral-200 px-3 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] dark:border-neutral-800">
+        <header className="flex shrink-0 items-center gap-1.5 border-b border-neutral-200 px-3 py-2 pt-[max(0.5rem,var(--safe-top))] dark:border-neutral-800">
           <SessionsDrawer currentSessionFile={snapshot?.sessionFile} />
           <div className="flex items-center gap-2">
             <span className="text-lg font-semibold">π</span>
