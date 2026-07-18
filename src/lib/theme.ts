@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 
 export type Theme = "dark" | "light";
+export type ThemePreference = "system" | Theme;
 
 const STORAGE_KEY = "pi-web-theme";
 const listeners = new Set<() => void>();
@@ -9,9 +10,21 @@ function systemTheme(): Theme {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
-export function currentTheme(): Theme {
+function readPreference(): ThemePreference {
   const stored = localStorage.getItem(STORAGE_KEY);
-  return stored === "dark" || stored === "light" ? stored : systemTheme();
+  if (stored === "dark" || stored === "light" || stored === "system") return stored;
+  // 예전 버전 호환: 키 없음 = 시스템 추종
+  return "system";
+}
+
+/** 실제 적용 중인 테마 (system이면 OS 설정 반영) */
+export function currentTheme(): Theme {
+  const pref = readPreference();
+  return pref === "system" ? systemTheme() : pref;
+}
+
+export function currentPreference(): ThemePreference {
+  return readPreference();
 }
 
 function apply(theme: Theme) {
@@ -21,31 +34,36 @@ function apply(theme: Theme) {
     ?.setAttribute("content", theme === "dark" ? "#0a0a0a" : "#ffffff");
 }
 
+function notify() {
+  for (const l of listeners) l();
+}
+
 /** 앱 시작 시 1회 호출 (렌더 전) */
 export function initTheme() {
   apply(currentTheme());
-  // 시스템 설정 변경 추적 (사용자가 직접 고르지 않은 경우만)
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-    if (!localStorage.getItem(STORAGE_KEY)) {
+    if (readPreference() === "system") {
       apply(systemTheme());
-      for (const l of listeners) l();
+      notify();
     }
   });
 }
 
-export function toggleTheme() {
-  const next: Theme = currentTheme() === "dark" ? "light" : "dark";
-  localStorage.setItem(STORAGE_KEY, next);
-  apply(next);
-  for (const l of listeners) l();
+export function setThemePreference(pref: ThemePreference) {
+  localStorage.setItem(STORAGE_KEY, pref);
+  apply(currentTheme());
+  notify();
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
 }
 
 export function useTheme(): Theme {
-  return useSyncExternalStore(
-    (listener) => {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
-    () => currentTheme(),
-  );
+  return useSyncExternalStore(subscribe, () => currentTheme());
+}
+
+export function useThemePreference(): ThemePreference {
+  return useSyncExternalStore(subscribe, () => currentPreference());
 }
