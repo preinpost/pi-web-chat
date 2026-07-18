@@ -51,6 +51,30 @@ export interface UIForkPoint {
   text: string;
 }
 
+export interface UIExtensionInfo {
+  /** 표시용 이름 (파일명 또는 패키지 내 경로) */
+  name: string;
+  /** 패키지 확장이면 패키지명 (예: "pi-subagents") */
+  packageName?: string;
+  /** 홈디렉토리를 ~ 로 축약한 경로 */
+  path: string;
+  scope: "user" | "project" | "temporary";
+  /** 등록된 커스텀 툴 이름 */
+  tools: string[];
+  /** 등록된 슬래시 커맨드 */
+  commands: string[];
+  /** 등록된 플래그 */
+  flags: string[];
+  /** 핸들러가 등록된 이벤트 이름 */
+  events: string[];
+}
+
+export interface UIExtensionsResponse {
+  extensions: UIExtensionInfo[];
+  /** 로드에 실패한 확장 */
+  errors: { path: string; error: string }[];
+}
+
 export interface UIImageAttachment {
   /** base64 (data URL 아님) */
   data: string;

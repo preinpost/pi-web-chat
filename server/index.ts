@@ -1,6 +1,7 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { createServer } from "node:http";
-import { extname, join, resolve } from "node:path";
+import { homedir } from "node:os";
+import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   type CreateAgentSessionRuntimeFactory,
@@ -15,6 +16,7 @@ import { WebSocketServer, type WebSocket } from "ws";
 import type {
   ClientCommand,
   ServerEvent,
+  UIExtensionInfo,
   UISessionInfo,
   UISnapshot,
   UIThinkingLevel,
@@ -22,9 +24,28 @@ import type {
 import { serializeMessages } from "./serialize.ts";
 
 const PORT = Number(process.env.PORT ?? 3141);
-// 에이전트가 작업할 디렉토리 (기본: pi-web 실행 위치, PI_WEB_CWD로 변경 가능)
-const AGENT_CWD = resolve(process.env.PI_WEB_CWD ?? process.cwd());
-const DIST_DIR = join(fileURLToPath(new URL(".", import.meta.url)), "..", "dist");
+const HOME = homedir();
+// 개인 채팅 워크스페이스 (프로젝트 cwd와 분리). PI_WEB_CWD로 오버라이드 가능
+const DEFAULT_AGENT_CWD = join(HOME, ".pi", "web-chat");
+const AGENT_CWD = resolve(process.env.PI_WEB_CWD ?? DEFAULT_AGENT_CWD);
+mkdirSync(AGENT_CWD, { recursive: true });
+
+// Resolve static assets for both layouts:
+//   production package: <pkg>/dist/index.js  + <pkg>/dist/public/
+//   dev (tsx server/):  <pkg>/server/index.ts + <pkg>/dist/  (vite default) or dist/public
+const HERE = dirname(fileURLToPath(import.meta.url));
+const DIST_DIR = (() => {
+  const candidates = [
+    join(HERE, "public"), // dist/index.js → dist/public
+    join(HERE, "dist", "public"), // monorepo-style
+    join(HERE, "..", "dist", "public"), // server/index.ts → dist/public
+    join(HERE, "..", "dist"), // server/index.ts → dist (legacy vite outDir)
+  ];
+  for (const dir of candidates) {
+    if (existsSync(join(dir, "index.html"))) return dir;
+  }
+  return candidates[0]!;
+})();
 
 // ---------------------------------------------------------------------------
 // pi 세션 런타임
@@ -143,10 +164,14 @@ function bindSession() {
       case "agent_start":
         broadcast({ type: "agent_start" });
         break;
-      case "agent_end":
+      case "agent_end": {
         broadcast({ type: "agent_end" });
-        broadcastSnapshot();
+        // agent_end 직후 session.isStreaming 이 아직 true일 수 있어 명시적으로 false
+        const snap = buildSnapshot();
+        snap.isStreaming = false;
+        broadcast({ type: "snapshot", snapshot: snap });
         break;
+      }
     }
   });
 }
@@ -234,6 +259,7 @@ const MIME: Record<string, string> = {
   ".png": "image/png",
   ".ico": "image/x-icon",
   ".woff2": "font/woff2",
+  ".webmanifest": "application/manifest+json",
 };
 
 const httpServer = createServer(async (req, res) => {
@@ -278,6 +304,46 @@ const httpServer = createServer(async (req, res) => {
       res.writeHead(200, { "content-type": "application/json" });
       res.end(
         JSON.stringify(points.map((p) => ({ entryId: p.entryId, text: p.text.slice(0, 200) }))),
+      );
+      return;
+    }
+
+    if (url.pathname === "/api/extensions") {
+      const { extensions, errors } = runtime.session.resourceLoader.getExtensions();
+      const shorten = (p: string) => (p.startsWith(HOME) ? `~${p.slice(HOME.length)}` : p);
+      const list: UIExtensionInfo[] = extensions.map((ext) => {
+        const { sourceInfo } = ext;
+        let name: string;
+        let packageName: string | undefined;
+        if (sourceInfo.origin === "package") {
+          packageName = sourceInfo.source.replace(/^npm:/, "");
+          // 패키지 루트 기준 상대경로에서 표시명 유도 (extensions/foo/index.ts -> foo)
+          const rel = relative(sourceInfo.baseDir ?? dirname(ext.path), ext.path)
+            .replace(/\.(ts|js|mjs|cjs)$/, "")
+            .replace(/\/index$/, "")
+            .replace(/^index$/, "")
+            .replace(/^(src\/)?(extensions\/)?/, "");
+          name = rel && rel !== "src" ? rel : packageName;
+        } else {
+          name = basename(ext.path).replace(/\.(ts|js|mjs|cjs)$/, "");
+        }
+        return {
+          name,
+          packageName,
+          path: shorten(ext.path),
+          scope: sourceInfo.scope,
+          tools: [...ext.tools.keys()],
+          commands: [...ext.commands.keys()],
+          flags: [...ext.flags.keys()],
+          events: [...ext.handlers.keys()],
+        };
+      });
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(
+        JSON.stringify({
+          extensions: list,
+          errors: errors.map((e) => ({ path: shorten(e.path), error: e.error })),
+        }),
       );
       return;
     }
@@ -330,5 +396,5 @@ wss.on("connection", (ws) => {
 });
 
 httpServer.listen(PORT, () => {
-  console.log(`pi-web server: http://localhost:${PORT}  (agent cwd: ${AGENT_CWD})`);
+  console.log(`pi-web server: http://localhost:${PORT}  (chat cwd: ${AGENT_CWD})`);
 });

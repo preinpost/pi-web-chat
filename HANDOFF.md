@@ -16,7 +16,7 @@ npm run typecheck      # tsc --noEmit
 ```
 
 - 인증: pi CLI와 동일한 `~/.pi/agent/auth.json` 사용. **pi를 먼저 설정해둬야 함**
-- `PI_WEB_CWD`: 에이전트 작업 디렉토리 (기본: 실행 위치), `PORT`: 서버 포트
+- `PI_WEB_CWD`: 에이전트 작업/세션 디렉토리 (기본: `~/.pi/web-chat`, 없으면 자동 생성), `PORT`: 서버 포트
 - 모바일 테스트: `host: true` 설정되어 있어 같은 네트워크에서 `http://<맥IP>:5173`
 
 ## 2. 아키텍처
@@ -38,8 +38,8 @@ AgentSessionRuntime ── 세션파일 공유: ~/.pi/agent/sessions (pi CLI와 
 | `shared/protocol.ts` | **서버/클라 공용 타입. 프로토콜 변경 시 여기부터 수정** |
 | `src/lib/chat.ts` | WS 클라이언트 + `useSyncExternalStore` 스토어, 자동 재연결(백오프) |
 | `src/lib/api.ts` | TanStack Query 훅: `useSessions` `useModels` `useForkPoints` |
-| `src/lib/theme.ts` | 다크/라이트 (class 기반, localStorage, 시스템 추종) |
-| `src/components/` | ChatPage(헤더 조립), MessageList, Composer, Markdown, ModelMenu, ThinkingMenu, ForkMenu, SessionsDrawer, ThemeToggle |
+| `src/lib/theme.ts` | 테마 preference (`system`/`light`/`dark`), class 기반, localStorage |
+| `src/components/` | ChatPage(헤더 조립), MessageList, Composer, Markdown, ModelMenu, ThinkingMenu, SettingsMenu(테마·포크), ForkDialog, SessionsDrawer |
 
 ### 핵심 동작 원리
 
@@ -59,12 +59,19 @@ AgentSessionRuntime ── 세션파일 공유: ~/.pi/agent/sessions (pi CLI와 
 
 ## 3. 완료된 작업
 
-| 커밋 | 내용 |
+| 커밋/시점 | 내용 |
 |---|---|
 | `27cfd65` | 초기 스캐폴드: SDK 서버 + WS 프로토콜 + 채팅 UI + 세션/모델 전환 + 모바일 대응 |
 | `5134819` | 마크다운 렌더링, 세션 fork UI, thinking level 전환, 이미지 첨부, 다크/라이트 토글 |
+| *(미커밋)* | **설정 메뉴(톱니)**: 헤더의 `ThemeToggle` + `ForkMenu`를 `SettingsMenu`로 통합. 테마를 시스템/라이트/다크 3단 radio로 확장 (`theme.ts` preference). fork는 `ForkDialog` 제어형 다이얼로그로 분리. 헤더 정리: `[세션] π ● … [🧠] [모델] [⚙️]`. typecheck 통과 |
 
-기능 상세는 `README.md` 참고. 전부 수동 검증 완료 (typecheck, build, 서버 기동, WS 스냅샷, API 응답).
+기능 상세는 `README.md` 참고. 초기 스캐폴드·마크다운 작업은 수동 검증 완료 (typecheck, build, 서버 기동, WS 스냅샷, API 응답).
+
+### 설정 메뉴 확장 가이드
+
+이후 저빈도 액션은 `SettingsMenu` 항목으로 추가하는 게 기본:
+- 세션 이름 변경 / HTML 내보내기 / steer·followUp / cwd 전환 등
+- 모델·thinking·새 세션·abort 는 헤더/컴포저 유지 (빈도 높음)
 
 ## 4. TODO (우선순위순)
 
@@ -72,7 +79,8 @@ AgentSessionRuntime ── 세션파일 공유: ~/.pi/agent/sessions (pi CLI와 
 
 - [ ] **에러 토스트 UI**: 서버 `error` 이벤트가 현재 `console.error`로만 감 (`chat.ts`).
       Base UI Toast 또는 간단한 배너로 표시
-- [ ] **세션 이름 변경**: SDK `session.setSessionName(name)` 있음. 드로어에서 인라인 편집 UI
+- [ ] **세션 이름 변경**: SDK `session.setSessionName(name)` 있음.
+      드로어 인라인 편집 또는 `SettingsMenu` 항목
 - [ ] **번들 사이즈**: 462kB → 500kB+ 경고. `vite.config.ts`에 `manualChunks`로
       react-markdown/hljs 분리 또는 dynamic import
 - [ ] **컨텍스트/비용 표시**: `session.getContextUsage()`, `getSessionStats()` →
@@ -82,8 +90,8 @@ AgentSessionRuntime ── 세션파일 공유: ~/.pi/agent/sessions (pi CLI와 
 
 - [ ] **멀티 클라이언트 정리**: 지금은 모든 브라우저 탭이 단일 세션을 공유(브로드캐스트).
       탭별 독립 세션이 필요하면 WS 연결별 runtime 맵으로 구조 변경 필요 (큰 작업)
-- [ ] **followUp 지원**: 스트리밍 중 전송이 무조건 steer. steer/followUp 선택 UI
-      (SDK: `streamingBehavior: "followUp"`)
+- [ ] **followUp 지원**: 스트리밍 중 전송이 무조건 steer. steer/followUp 선택 UI는
+      `SettingsMenu` (또는 컴포저 근처) — SDK: `streamingBehavior: "followUp"`
 - [ ] **스냅샷 이미지 최적화**: user 이미지가 스냅샷마다 base64로 통째로 감.
       별도 엔드포인트(`/api/image/:hash`)로 분리하거나 스냅샷에서 축소본만
 - [ ] **마크다운 스트리밍 성능**: 델타마다 전체 re-parse. 긴 응답에서 느려지면
@@ -95,11 +103,12 @@ AgentSessionRuntime ── 세션파일 공유: ~/.pi/agent/sessions (pi CLI와 
 ### P3 — 아이디어
 
 - [ ] PWA (manifest + 홈화면 추가, 오프라인 셸)
-- [ ] 세션 HTML 내보내기 (SDK `session.exportToHtml()` 있음)
+- [ ] 세션 HTML 내보내기 (SDK `session.exportToHtml()` 있음) → `SettingsMenu` 항목 후보
 - [ ] compaction 상태 표시 (`compaction_start/end` 이벤트 이미 수신 가능)
 - [ ] 인증 레이어 (Basic auth 또는 토큰) — 현재 **LAN 전용으로만 쓸 것**
       (에이전트가 서버 파일시스템 접근 가능하므로 외부 노출 금지)
-- [ ] 다중 프로젝트: 드로어에서 `PI_WEB_CWD` 전환 (`runtime.switchSession`의 `cwdOverride` 활용)
+- [ ] 다중 프로젝트: `SettingsMenu`/드로어에서 cwd 전환
+      (`runtime.switchSession`의 `cwdOverride` 활용)
 
 ## 5. 알려진 이슈 / 엣지케이스
 

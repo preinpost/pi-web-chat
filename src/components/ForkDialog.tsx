@@ -1,33 +1,25 @@
 import { Dialog } from "@base-ui-components/react/dialog";
-import { useState } from "react";
 import { useForkPoints } from "../lib/api";
 import { chatClient } from "../lib/chat";
 
 /** 세션의 특정 유저 메시지 지점에서 새 세션으로 fork */
-export function ForkMenu() {
-  const [open, setOpen] = useState(false);
+export function ForkDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const { data: points, refetch } = useForkPoints(open);
 
   return (
     <Dialog.Root
       open={open}
       onOpenChange={(next) => {
-        setOpen(next);
+        onOpenChange(next);
         if (next) void refetch();
       }}
     >
-      <Dialog.Trigger
-        className="flex size-9 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 dark:hover:bg-neutral-900 dark:hover:text-neutral-200"
-        aria-label="세션 포크"
-        title="이 세션을 특정 지점에서 포크"
-      >
-        <svg viewBox="0 0 24 24" className="size-5 fill-none stroke-current stroke-2">
-          <circle cx="6" cy="5" r="2.2" />
-          <circle cx="18" cy="5" r="2.2" />
-          <circle cx="12" cy="19" r="2.2" />
-          <path d="M6 7.2v1.3a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4V7.2M12 12.5v4.3" strokeLinecap="round" />
-        </svg>
-      </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 bg-black/60 transition-opacity data-[starting-style]:opacity-0 data-[ending-style]:opacity-0" />
         <Dialog.Popup className="fixed top-1/2 left-1/2 flex max-h-[75vh] w-[90vw] max-w-md -translate-x-1/2 -translate-y-1/2 flex-col rounded-2xl border border-neutral-200 bg-white shadow-2xl outline-none dark:border-neutral-800 dark:bg-neutral-900">
@@ -44,7 +36,7 @@ export function ForkMenu() {
                 key={p.entryId}
                 onClick={() => {
                   chatClient.send({ type: "fork", entryId: p.entryId });
-                  setOpen(false);
+                  onOpenChange(false);
                 }}
                 className="block w-full px-4 py-2.5 text-left hover:bg-neutral-100 dark:hover:bg-neutral-800"
               >
