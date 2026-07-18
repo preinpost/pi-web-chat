@@ -1,138 +1,137 @@
 # pi-web-chat
 
-Web UI for the [pi](https://pi.dev) coding agent (OpenWebUI-style, mobile-friendly).
+pi 코딩 에이전트용 웹 UI (OpenWebUI 스타일). 모바일 지원.
 
-[한국어](./README.ko.md)
+[English](./README.md)
 
 ## Install & run
 
-Intended flow:
+의도한 사용 흐름:
 
 ```bash
-# 1) Install pi (skip if already installed)
+# 1) pi 설치 (이미 있으면 skip)
 npm i -g @earendil-works/pi-coding-agent
 
-# 2) Install pi-web-chat
+# 2) pi-web-chat 패키지 설치
 pi install npm:pi-web-chat
-# pi install /path/to/pi-web-chat          # local path
+# pi install /path/to/pi-web-chat          # 로컬
 # pi install git:github.com/preinpost/pi-web-chat@v0.1.1
 
-# 3) Start the web UI daemon only (no TUI; returns to the shell immediately)
+# 3) 웹 UI만 백그라운드 기동 (TUI 안 뜸, 바로 셸 복귀)
 pi --web
 # → pi-web-chat started — http://localhost:3141
 
 pi --web status
 pi --web stop
-pi --web 3200          # custom port
+pi --web 3200          # 포트 지정
 ```
 
-`pi --web` starts **only the web server daemon** and exits. It does not open the pi TUI.
-If the server is already running, it prints the URL again.
+`pi --web`은 **웹 서버 데몬만** 띄우고 즉시 종료합니다. pi TUI는 열리지 않습니다.
+이미 떠 있으면 URL만 다시 보여 줍니다.
 
-### Other ways to run
+### 다른 실행 방법
 
 ```bash
-# Standalone CLI (no pi session)
+# 단독 CLI (pi 세션 없이)
 pi-web-chat
 
-# Inside a pi session
+# pi 세션 안 slash command
 /web           # start (default port 3141)
-/web 3200      # custom port
+/web 3200      # port 지정
 /web status
 /web stop
 ```
 
-State files: `~/.pi/web-chat/pi-web-chat.pid`, `pi-web-chat.port`, `pi-web-chat.log`
+상태 파일: `~/.pi/web-chat/pi-web-chat.pid`, `pi-web-chat.port`, `pi-web-chat.log`
 
-> `pi install` installs production dependencies only. The frontend ships as built assets under `dist/public`, so end users do not need Vite/React installed.
+> `pi install`은 production deps만 설치합니다. 프론트는 `dist/public` 빌드 산출물로 포함되므로 사용자 PC에 Vite/React가 필요 없습니다.
 
-## Development
+## 개발
 
 ```bash
 npm install
 
-# Dev (server:3141 + vite:5173, proxies /api and /ws)
+# 개발 (서버:3141 + vite:5173, /api·/ws 프록시)
 npm run dev
 # → http://localhost:5173
 
-# Production build + run
+# 프로덕션 빌드 + 실행
 npm run build
 npm start
 # → http://localhost:3141
 ```
 
-### Package checks
+### 패키지 배포 체크
 
 ```bash
 npm run pack:check   # build + npm pack --dry-run
-npm pack             # creates pi-web-chat-*.tgz
+npm pack             # pi-web-chat-*.tgz 생성
 pi install ./pi-web-chat-0.1.1.tgz
-# or install from the directory
+# 또는 디렉터리 직접
 pi install .
 ```
 
-Quick local extension load:
+### GitHub Actions 릴리스
+
+repo **Actions → Release → Run workflow** 에서 bump 타입을 고릅니다.
+
+| input | 설명 |
+|---|---|
+| `bump` | `patch` / `minor` / `major` |
+| `publish_npm` | 태그 후 npm publish (기본 on) |
+| `dry_run` | git push 생략 + `npm publish --dry-run` (실제 배포 안 함) |
+
+흐름: `npm ci` → `typecheck` → `build` → `npm pack --dry-run` → `npm version <bump>` → push commit/tag → `npm publish`
+
+필요 secret:
+- `NPM_TOKEN` — npm automation/publish 토큰 (`publish_npm` 사용 시)
+
+로컬에서 pi package 로드만 빠르게 보려면:
 
 ```bash
 npm run build
 pi -e .
-# then /web in the session
+# 세션에서 /web
 ```
 
-### GitHub Actions release
+## 환경변수
 
-In the repo: **Actions → Release → Run workflow**
+- `PORT`: 서버 포트 (기본 3141)
+- `HOST`: bind 주소 (기본 `127.0.0.1`). LAN 공개 시에만 `0.0.0.0` 등 사용
+- `PI_WEB_CWD`: 에이전트 작업/세션 디렉토리 (기본: `~/.pi/web-chat`, 없으면 자동 생성)
 
-| input | description |
-|---|---|
-| `bump` | `patch` / `minor` / `major` |
-| `publish_npm` | publish to npm after tagging (default on) |
-| `dry_run` | skip git push + `npm publish --dry-run` |
+인증은 pi CLI와 동일하게 `~/.pi/agent/auth.json`을 사용합니다. 먼저 `pi`를 한 번 실행해 로그인/API 키 설정이 되어 있어야 합니다.
 
-Flow: `npm ci` → `typecheck` → `build` → `npm pack --dry-run` → `npm version <bump>` → push commit/tag → `npm publish`
+> **보안**: 앱 자체 인증이 없습니다. 기본은 루프백 전용입니다. 외부/공인망에 그대로 노출하지 마세요. 원격 접근이 필요하면 Tailscale serve / SSH 터널 등을 권장합니다.
 
-Required secret:
+## 스택
 
-- `NPM_TOKEN` — npm automation token (when `publish_npm` is on)
+- **서버**: Node + [pi SDK](https://pi.dev) (`@earendil-works/pi-coding-agent`) + WebSocket (`ws`)
+- **프론트**: React 19 + TanStack Router / Query + Base UI + Tailwind CSS v4 + Vite
 
-## Environment
-
-- `PORT` — server port (default `3141`)
-- `HOST` — bind address (default `127.0.0.1`). Use `0.0.0.0` only on trusted networks
-- `PI_WEB_CWD` — agent working/session directory (default `~/.pi/web-chat`, created if missing)
-
-Auth uses the same `~/.pi/agent/auth.json` as the pi CLI. Configure pi (login / API keys) first.
-
-> **Security:** There is no built-in app auth. The server binds to loopback by default. Do not expose it on a public network. For remote access, prefer Tailscale Serve or an SSH tunnel.
-
-## Stack
-
-- **Server:** Node + [pi SDK](https://pi.dev) (`@earendil-works/pi-coding-agent`) + WebSocket (`ws`)
-- **Frontend:** React 19 + TanStack Router / Query + Base UI + Tailwind CSS v4 + Vite
-
-## Layout
+## 구조
 
 ```
-bin/pi-web-chat.mjs       CLI entry (runs dist/index.js)
-extensions/pi-web-chat.ts pi package extension (/web, --web)
-scripts/build.mjs         vite frontend + esbuild server bundle
-server/                   server source
-shared/protocol.ts        shared server/client types
-src/                      frontend source
-dist/index.js             built server (published)
-dist/public/              built frontend (published)
+bin/pi-web-chat.mjs       CLI 엔트리 (dist/index.js 실행)
+extensions/pi-web-chat.ts pi package extension (/web)
+scripts/build.mjs         vite 프론트 + esbuild 서버 번들
+server/                   서버 소스
+shared/protocol.ts        서버/클라 공용 타입
+src/                      프론트 소스
+dist/index.js             빌드된 서버 (배포물)
+dist/public/              빌드된 프론트 (배포물)
 ```
 
-## Features
+## 기능
 
-- Live streaming (text / thinking deltas)
-- **Markdown rendering** (react-markdown + GFM + highlight.js)
-- Tool-call display (bash, edit, read, …) with expandable results
-- Session list / switch / new session (can share pi CLI sessions)
-- **Session fork** from a user message via the settings menu
-- Model switching + **thinking level**
-- **Image attachments** (file picker / clipboard paste)
-- **Settings menu:** theme (system/light/dark) + session fork
-- Send while streaming → steering
-- Abort
-- Mobile: safe-area, `dvh` layout, session drawer
+- 실시간 스트리밍 (text / thinking 델타)
+- **마크다운 렌더링** (react-markdown + GFM + highlight.js 코드 하이라이팅)
+- 툴 실행 표시 (bash, edit, read, ...) + 결과 펼쳐보기
+- 세션 목록 / 전환 / 새 세션 (pi CLI 세션과 공유됨)
+- **세션 포크**: 설정 메뉴에서 특정 유저 메시지 지점으로 새 세션 분기
+- 모델 전환 + **thinking level 전환**
+- **이미지 첨부**: 파일 선택 / 클립보드 붙여넣기
+- **설정 메뉴**: 테마(시스템/라이트/다크) + 세션 포크
+- 스트리밍 중 메시지 전송 → steering
+- 중단 (abort)
+- 모바일: safe-area, dvh 레이아웃, 세션 드로어
