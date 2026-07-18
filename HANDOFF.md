@@ -28,6 +28,7 @@ pi install /path/to/pi-web-chat   # 또는 git:… / npm:pi-web-chat
 pi --web                     # 웹 UI 데몬만 기동, TUI 안 뜸, 셸 즉시 복귀
 pi --web status
 pi --web stop
+pi --web restart             # stop + start (기존 port/host 유지)
 pi --web 3200                # 포트 지정
 pi --web --lan               # bind 0.0.0.0 (LAN)
 pi --web --host 0.0.0.0      # bind 주소 명시

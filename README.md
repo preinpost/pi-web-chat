@@ -23,6 +23,7 @@ pi --web
 
 pi --web status
 pi --web stop
+pi --web restart             # stop + start (keeps prior port/host)
 pi --web 3200                # custom port
 pi --web --lan               # bind 0.0.0.0 (LAN)
 pi --web --host 0.0.0.0      # same, explicit bind address
@@ -48,6 +49,7 @@ pi-web-chat
 /web --host 0.0.0.0     # explicit bind address
 /web status
 /web stop
+/web restart
 ```
 
 State files: `~/.pi/web-chat/pi-web-chat.pid`, `pi-web-chat.port`, `pi-web-chat.host`, `pi-web-chat.log`

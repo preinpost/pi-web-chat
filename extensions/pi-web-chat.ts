@@ -147,7 +147,26 @@ function clearStateFiles(): void {
   }
 }
 
-function stopServer(): { stopped: boolean; pid?: number } {
+function sleepSync(ms: number): void {
+  const clamped = Math.max(1, Math.min(ms, 5_000));
+  try {
+    execFileSync(
+      process.execPath,
+      [
+        "-e",
+        `Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,${clamped})`,
+      ],
+      { stdio: "ignore", timeout: clamped + 1_000 },
+    );
+  } catch {
+    /* ignore timeout / platform quirks */
+  }
+}
+
+function stopServer(opts: { waitMs?: number } = {}): {
+  stopped: boolean;
+  pid?: number;
+} {
   const pid = readPid();
   if (pid === null) {
     clearStateFiles();
@@ -159,6 +178,26 @@ function stopServer(): { stopped: boolean; pid?: number } {
   } catch {
     /* already dead */
   }
+
+  const waitMs = opts.waitMs ?? 0;
+  if (waitMs > 0) {
+    const deadline = Date.now() + waitMs;
+    while (Date.now() < deadline && isProcessAlive(pid)) {
+      sleepSync(50);
+    }
+    if (isProcessAlive(pid)) {
+      try {
+        process.kill(pid, "SIGKILL");
+      } catch {
+        /* ignore */
+      }
+      const killDeadline = Date.now() + 1_000;
+      while (Date.now() < killDeadline && isProcessAlive(pid)) {
+        sleepSync(50);
+      }
+    }
+  }
+
   clearStateFiles();
   return { stopped: true, pid };
 }
@@ -275,12 +314,16 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   }
 }
 
-type DaemonAction = "start" | "stop" | "status";
+type DaemonAction = "start" | "stop" | "status" | "restart";
 
 type ParsedWebArgs = {
   action: DaemonAction;
   port: string;
   host: string;
+  /** True when user explicitly set port (so restart can keep previous otherwise). */
+  portExplicit: boolean;
+  /** True when user explicitly set host / --lan. */
+  hostExplicit: boolean;
 };
 
 function defaultPort(): string {
@@ -302,20 +345,28 @@ function parseWebOptions(
   let action: DaemonAction = "start";
   let port = defaults.port;
   let host = defaults.host;
+  let portExplicit = false;
+  let hostExplicit = false;
   let sawAction = false;
 
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i]!;
 
-    if (token === "stop" || token === "status") {
+    if (
+      token === "stop" ||
+      token === "status" ||
+      token === "restart" ||
+      token === "--restart"
+    ) {
       if (sawAction) return { error: `unexpected extra action '${token}'` };
-      action = token;
+      action = token === "--restart" ? "restart" : token;
       sawAction = true;
       continue;
     }
 
     if (token === "--lan" || token === "--public" || token === "lan" || token === "public") {
       host = LAN_HOST;
+      hostExplicit = true;
       continue;
     }
 
@@ -325,6 +376,7 @@ function parseWebOptions(
         return { error: `${token} requires an address (e.g. 0.0.0.0)` };
       }
       host = value;
+      hostExplicit = true;
       continue;
     }
 
@@ -332,6 +384,7 @@ function parseWebOptions(
       const value = token.slice("--host=".length);
       if (!value) return { error: "--host requires an address (e.g. 0.0.0.0)" };
       host = value;
+      hostExplicit = true;
       continue;
     }
 
@@ -339,20 +392,22 @@ function parseWebOptions(
       const value = token.slice("-H=".length);
       if (!value) return { error: "-H requires an address (e.g. 0.0.0.0)" };
       host = value;
+      hostExplicit = true;
       continue;
     }
 
     if (/^\d+$/.test(token)) {
       port = token;
+      portExplicit = true;
       continue;
     }
 
     return {
-      error: `unknown argument '${token}' (use port, --host <addr>, --lan, stop, status)`,
+      error: `unknown argument '${token}' (use port, --host <addr>, --lan, stop, status, restart)`,
     };
   }
 
-  return { action, port, host };
+  return { action, port, host, portExplicit, hostExplicit };
 }
 
 /** Parse `pi --web [stop|status|port] [--host <addr>|--lan]` from raw argv. */
@@ -371,10 +426,10 @@ function parseWebDaemonArgs(argv: string[] = process.argv): {
 
   const tokens: string[] = [];
 
-  // Allow --host/--lan before --web; later tokens (after --web) override.
+  // Allow --host/--lan/--restart before --web; later tokens (after --web) override.
   for (let i = 0; i < idx; i++) {
     const arg = argv[i]!;
-    if (arg === "--lan" || arg === "--public") {
+    if (arg === "--lan" || arg === "--public" || arg === "--restart") {
       tokens.push(arg);
       continue;
     }
@@ -398,11 +453,12 @@ function parseWebDaemonArgs(argv: string[] = process.argv): {
 
   for (let i = idx + 1; i < argv.length; i++) {
     const arg = argv[i]!;
-    // Stop at next top-level pi flag, but keep our own --host/--lan/-H.
+    // Stop at next top-level pi flag, but keep our own web flags.
     if (
       arg.startsWith("-") &&
       arg !== "--lan" &&
       arg !== "--public" &&
+      arg !== "--restart" &&
       arg !== "--host" &&
       arg !== "-H" &&
       !arg.startsWith("--host=") &&
@@ -418,6 +474,59 @@ function parseWebDaemonArgs(argv: string[] = process.argv): {
   return { enabled: true, ...parsed };
 }
 
+/** Resolve port/host for start/restart, keeping previous bind on bare restart. */
+function resolveLaunchTarget(parsed: ParsedWebArgs): { port: string; host: string } {
+  const running = readPid() !== null;
+  const prevPort = running ? readPort() : null;
+  const prevHost = running ? readHost() : null;
+  return {
+    port: parsed.portExplicit ? parsed.port : (prevPort ?? parsed.port),
+    host: parsed.hostExplicit ? parsed.host : (prevHost ?? parsed.host),
+  };
+}
+
+function launchDaemon(
+  port: string,
+  host: string,
+  opts: { openBrowser: boolean; verb: "started" | "restarted" },
+): void {
+  const result = startServer(port, host);
+  if (!result.ok) {
+    console.error(`pi-web-chat: ${result.error}`);
+    process.exit(1);
+  }
+
+  const url = urlFor(result.port, result.host);
+  const summary = describeServer(result.port, result.host, result.pid);
+
+  if (result.already) {
+    console.log(`pi-web-chat already running — ${summary}`);
+    if (opts.openBrowser) openBrowser(url);
+    process.exit(0);
+  }
+
+  process.stdout.write(`pi-web-chat starting (pid ${result.pid})…`);
+  const ready = waitForServerReady(result.port, result.host, result.pid);
+  if (!ready.ok) {
+    process.stdout.write("\n");
+    console.error(`pi-web-chat: ${ready.error}`);
+    process.exit(1);
+  }
+  process.stdout.write(" ready\n");
+
+  console.log(`pi-web-chat ${opts.verb} — ${summary}`);
+  if (!isLoopbackHost(result.host)) {
+    console.log(
+      "  warning: bound beyond loopback with no app auth — use only on trusted networks",
+    );
+  }
+  console.log(`  stop:    pi --web stop`);
+  console.log(`  restart: pi --web restart`);
+  console.log(`  status:  pi --web status`);
+  console.log(`  logs:    ${LOG_FILE}`);
+  if (opts.openBrowser) openBrowser(url);
+}
+
 function runDaemonAndExit(): void {
   const parsed = parseWebDaemonArgs();
   if ("error" in parsed) {
@@ -425,10 +534,10 @@ function runDaemonAndExit(): void {
     process.exit(1);
   }
 
-  const { action, port, host } = parsed;
+  const { action } = parsed;
 
   if (action === "stop") {
-    const { stopped, pid } = stopServer();
+    const { stopped, pid } = stopServer({ waitMs: 3_000 });
     console.log(stopped ? `pi-web-chat stopped (pid ${pid})` : "pi-web-chat is not running");
     process.exit(0);
   }
@@ -443,40 +552,19 @@ function runDaemonAndExit(): void {
     process.exit(0);
   }
 
-  const result = startServer(port, host);
-  if (!result.ok) {
-    console.error(`pi-web-chat: ${result.error}`);
-    process.exit(1);
-  }
-
-  const url = urlFor(result.port, result.host);
-  const summary = describeServer(result.port, result.host, result.pid);
-
-  if (result.already) {
-    console.log(`pi-web-chat already running — ${summary}`);
-    openBrowser(url);
+  if (action === "restart") {
+    const { port, host } = resolveLaunchTarget(parsed);
+    const { stopped, pid } = stopServer({ waitMs: 5_000 });
+    if (stopped) {
+      console.log(`pi-web-chat stopped (pid ${pid})`);
+    }
+    launchDaemon(port, host, { openBrowser: true, verb: "restarted" });
     process.exit(0);
   }
 
-  process.stdout.write(`pi-web-chat starting (pid ${result.pid})…`);
-  const ready = waitForServerReady(result.port, result.host, result.pid);
-  if (!ready.ok) {
-    process.stdout.write("\n");
-    console.error(`pi-web-chat: ${ready.error}`);
-    process.exit(1);
-  }
-  process.stdout.write(" ready\n");
-
-  console.log(`pi-web-chat started — ${summary}`);
-  if (!isLoopbackHost(result.host)) {
-    console.log(
-      "  warning: bound beyond loopback with no app auth — use only on trusted networks",
-    );
-  }
-  console.log(`  stop:   pi --web stop`);
-  console.log(`  status: pi --web status`);
-  console.log(`  logs:   ${LOG_FILE}`);
-  openBrowser(url);
+  // start
+  const { port, host } = resolveLaunchTarget(parsed);
+  launchDaemon(port, host, { openBrowser: true, verb: "started" });
   // Detached server keeps running; do not open pi TUI.
   process.exit(0);
 }
@@ -484,7 +572,7 @@ function runDaemonAndExit(): void {
 export default function (pi: ExtensionAPI) {
   pi.registerFlag("web", {
     description:
-      "Start pi-web-chat UI in background and exit (no TUI). Options: [port] [--host <addr>|--lan]",
+      "Start pi-web-chat UI in background and exit (no TUI). Options: [port] [--host <addr>|--lan] [stop|status|restart]",
     type: "boolean",
     default: false,
   });
@@ -501,6 +589,12 @@ export default function (pi: ExtensionAPI) {
     default: false,
   });
 
+  pi.registerFlag("restart", {
+    description: "With --web, stop the existing daemon (if any) and start a fresh one",
+    type: "boolean",
+    default: false,
+  });
+
   // Handle --web as early as possible during extension load, before TUI starts.
   // getFlag() is not populated yet at factory time, so read argv directly.
   // waitForServerReady is synchronous so we exit only after the daemon is up.
@@ -510,7 +604,7 @@ export default function (pi: ExtensionAPI) {
 
   pi.registerCommand("web", {
     description:
-      "pi-web-chat UI: /web [port] [--host <addr>|--lan] | /web stop | /web status",
+      "pi-web-chat UI: /web [port] [--host <addr>|--lan] | /web stop | /web status | /web restart",
     handler: async (args, ctx) => {
       const tokens = args.trim() ? args.trim().split(/\s+/) : [];
       const parsed = parseWebOptions(tokens);
@@ -519,10 +613,10 @@ export default function (pi: ExtensionAPI) {
         return;
       }
 
-      const { action, port, host } = parsed;
+      const { action } = parsed;
 
       if (action === "stop") {
-        const { stopped, pid } = stopServer();
+        const { stopped, pid } = stopServer({ waitMs: 3_000 });
         ctx.ui.notify(
           stopped ? `pi-web-chat stopped (pid ${pid})` : "pi-web-chat is not running",
           "info",
@@ -543,6 +637,33 @@ export default function (pi: ExtensionAPI) {
         return;
       }
 
+      if (action === "restart") {
+        const { port, host } = resolveLaunchTarget(parsed);
+        const { stopped, pid } = stopServer({ waitMs: 5_000 });
+        if (stopped) {
+          ctx.ui.notify(`pi-web-chat stopped (pid ${pid})`, "info");
+        }
+        const result = startServer(port, host);
+        if (!result.ok) {
+          ctx.ui.notify(`pi-web-chat: ${result.error}`, "error");
+          return;
+        }
+        ctx.ui.notify(`pi-web-chat starting (pid ${result.pid})…`, "info");
+        const ready = waitForServerReady(result.port, result.host, result.pid);
+        if (!ready.ok) {
+          ctx.ui.notify(`pi-web-chat: ${ready.error}`, "error");
+          return;
+        }
+        const summary = describeServer(result.port, result.host, result.pid);
+        const warning = !isLoopbackHost(result.host)
+          ? " — warning: non-loopback bind, no app auth"
+          : "";
+        ctx.ui.notify(`pi-web-chat restarted — ${summary}${warning}`, "info");
+        return;
+      }
+
+      // start
+      const { port, host } = resolveLaunchTarget(parsed);
       const result = startServer(port, host);
       if (!result.ok) {
         ctx.ui.notify(`pi-web-chat: ${result.error}`, "error");

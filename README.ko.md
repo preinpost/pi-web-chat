@@ -23,6 +23,7 @@ pi --web
 
 pi --web status
 pi --web stop
+pi --web restart             # 중지 후 재시작 (기존 port/host 유지)
 pi --web 3200                # 포트 지정
 pi --web --lan               # 0.0.0.0 바인드 (LAN)
 pi --web --host 0.0.0.0      # 동일, bind 주소 명시
@@ -48,6 +49,7 @@ pi-web-chat
 /web --host 0.0.0.0     # bind 주소 명시
 /web status
 /web stop
+/web restart
 ```
 
 상태 파일: `~/.pi/web-chat/pi-web-chat.pid`, `pi-web-chat.port`, `pi-web-chat.host`, `pi-web-chat.log`
