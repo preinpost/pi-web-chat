@@ -219,7 +219,7 @@ function SessionsPanel({
 /** 데스크톱 고정 사이드바 */
 export function SessionsSidebar({ currentSessionFile }: { currentSessionFile?: string }) {
   return (
-    <aside className="hidden h-dvh w-72 shrink-0 flex-col border-r border-neutral-200 bg-white md:flex dark:border-neutral-800 dark:bg-neutral-900">
+    <aside className="hidden h-full min-h-0 w-72 shrink-0 flex-col border-r border-neutral-200 bg-white md:flex dark:border-neutral-800 dark:bg-neutral-900">
       <SessionsPanel currentSessionFile={currentSessionFile} docked active />
     </aside>
   );

@@ -146,7 +146,7 @@ export function MessageList({
         if (!el) return;
         stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
       }}
-      className="flex-1 overflow-y-auto"
+      className="min-h-0 flex-1 overflow-y-auto"
     >
       <div className="mx-auto flex max-w-3xl flex-col gap-5 px-4 py-6">
         {messages.length === 0 && !streamText && (
