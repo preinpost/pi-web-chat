@@ -47,9 +47,15 @@ export function serializeMessages(messages: unknown[]): UIMessage[] {
       if (typeof m.content === "string") {
         blocks.push({ type: "text", text: m.content });
       } else if (Array.isArray(m.content)) {
-        for (const b of m.content as { type: string; text?: string }[]) {
+        for (const b of m.content as { type: string; text?: string; data?: string; mimeType?: string }[]) {
           if (b.type === "text" && b.text) blocks.push({ type: "text", text: b.text });
-          else if (b.type === "image") blocks.push({ type: "image" });
+          else if (b.type === "image") {
+            blocks.push({
+              type: "image",
+              dataUrl:
+                b.data && b.mimeType ? `data:${b.mimeType};base64,${b.data}` : undefined,
+            });
+          }
         }
       }
       if (blocks.length > 0) out.push({ role: "user", content: blocks });

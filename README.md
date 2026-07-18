@@ -43,9 +43,13 @@ src/components/      채팅 UI (Base UI Menu/Dialog + Tailwind)
 ## 기능
 
 - 실시간 스트리밍 (text / thinking 델타)
+- **마크다운 렌더링** (react-markdown + GFM + highlight.js 코드 하이라이팅)
 - 툴 실행 표시 (bash, edit, read, ...) + 결과 펼쳐보기
 - 세션 목록 / 전환 / 새 세션 (pi CLI 세션과 공유됨)
-- 모델 전환
+- **세션 포크**: 특정 유저 메시지 지점에서 새 세션 분기 (`runtime.fork()`), 해당 메시지가 입력창에 재주입됨
+- 모델 전환 + **thinking level 전환** (모델별 지원 레벨 자동 필터)
+- **이미지 첨부**: 파일 선택 / 클립보드 붙여넣기, 미리보기 후 전송
+- **다크/라이트 모드 토글** (기본: 시스템 설정 추종, 선택 시 localStorage 저장)
 - 스트리밍 중 메시지 전송 → steering
 - 중단 (abort)
 - 모바일: safe-area, dvh 레이아웃, 세션 드로어

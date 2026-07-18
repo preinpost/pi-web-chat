@@ -23,7 +23,7 @@ export function SessionsDrawer({ currentSessionFile }: { currentSessionFile?: st
       }}
     >
       <Dialog.Trigger
-        className="flex size-9 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-900 hover:text-neutral-200"
+        className="flex size-9 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 dark:hover:bg-neutral-900 dark:hover:text-neutral-200"
         aria-label="세션 목록"
       >
         <svg viewBox="0 0 24 24" className="size-5 fill-none stroke-current stroke-2">
@@ -32,9 +32,9 @@ export function SessionsDrawer({ currentSessionFile }: { currentSessionFile?: st
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 bg-black/60 transition-opacity data-[starting-style]:opacity-0 data-[ending-style]:opacity-0" />
-        <Dialog.Popup className="fixed inset-y-0 left-0 flex w-[85vw] max-w-sm flex-col bg-neutral-900 shadow-2xl outline-none transition-transform data-[starting-style]:-translate-x-full data-[ending-style]:-translate-x-full">
-          <div className="flex items-center justify-between border-b border-neutral-800 px-4 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
-            <Dialog.Title className="text-sm font-semibold text-neutral-200">세션</Dialog.Title>
+        <Dialog.Popup className="fixed inset-y-0 left-0 flex w-[85vw] max-w-sm flex-col bg-white shadow-2xl outline-none transition-transform data-[starting-style]:-translate-x-full data-[ending-style]:-translate-x-full dark:bg-neutral-900">
+          <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] dark:border-neutral-800">
+            <Dialog.Title className="text-sm font-semibold">세션</Dialog.Title>
             <button
               onClick={() => {
                 chatClient.send({ type: "new_session" });
@@ -55,11 +55,11 @@ export function SessionsDrawer({ currentSessionFile }: { currentSessionFile?: st
                     chatClient.send({ type: "switch_session", path: s.path });
                     setOpen(false);
                   }}
-                  className={`block w-full border-b border-neutral-800/60 px-4 py-3 text-left hover:bg-neutral-800/50 ${
-                    active ? "bg-neutral-800/70" : ""
+                  className={`block w-full border-b border-neutral-200/60 px-4 py-3 text-left hover:bg-neutral-100 dark:border-neutral-800/60 dark:hover:bg-neutral-800/50 ${
+                    active ? "bg-neutral-100 dark:bg-neutral-800/70" : ""
                   }`}
                 >
-                  <div className="truncate text-sm text-neutral-200">
+                  <div className="truncate text-sm text-neutral-800 dark:text-neutral-200">
                     {s.name ?? s.firstMessage ?? "(빈 세션)"}
                   </div>
                   <div className="mt-0.5 text-xs text-neutral-500">

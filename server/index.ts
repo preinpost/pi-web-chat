@@ -12,7 +12,13 @@ import {
   SessionManager,
 } from "@earendil-works/pi-coding-agent";
 import { WebSocketServer, type WebSocket } from "ws";
-import type { ClientCommand, ServerEvent, UISessionInfo, UISnapshot } from "../shared/protocol.ts";
+import type {
+  ClientCommand,
+  ServerEvent,
+  UISessionInfo,
+  UISnapshot,
+  UIThinkingLevel,
+} from "../shared/protocol.ts";
 import { serializeMessages } from "./serialize.ts";
 
 const PORT = Number(process.env.PORT ?? 3141);
@@ -54,6 +60,31 @@ function broadcast(event: ServerEvent) {
   }
 }
 
+const ALL_THINKING_LEVELS: UIThinkingLevel[] = [
+  "off",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+];
+
+function supportedThinkingLevels(model: unknown): UIThinkingLevel[] {
+  const m = model as
+    | { reasoning?: boolean; thinkingLevelMap?: Record<string, string | null> }
+    | null
+    | undefined;
+  if (!m?.reasoning) return ["off"];
+  const map = m.thinkingLevelMap;
+  return ALL_THINKING_LEVELS.filter((level) => {
+    if (map && map[level] === null) return false;
+    // xhigh/max는 명시적으로 매핑된 모델 패밀리만 지원
+    if ((level === "xhigh" || level === "max") && map?.[level] == null) return false;
+    return true;
+  });
+}
+
 function buildSnapshot(): UISnapshot {
   const session = runtime.session;
   const model = session.model;
@@ -61,8 +92,15 @@ function buildSnapshot(): UISnapshot {
     messages: serializeMessages(session.messages),
     isStreaming: session.isStreaming,
     model: model
-      ? { provider: model.provider, id: model.id, name: (model as { name?: string }).name }
+      ? {
+          provider: model.provider,
+          id: model.id,
+          name: (model as { name?: string }).name,
+          reasoning: (model as { reasoning?: boolean }).reasoning,
+        }
       : null,
+    thinkingLevel: session.thinkingLevel as UIThinkingLevel,
+    thinkingLevels: supportedThinkingLevels(model),
     sessionFile: session.sessionFile,
   };
 }
@@ -124,12 +162,21 @@ async function handleCommand(cmd: ClientCommand, ws: WebSocket) {
   switch (cmd.type) {
     case "prompt": {
       const text = cmd.text.trim();
-      if (!text) return;
-      const options = session.isStreaming ? { streamingBehavior: "steer" as const } : undefined;
+      const images = (cmd.images ?? []).map((img) => ({
+        type: "image" as const,
+        data: img.data,
+        mimeType: img.mimeType,
+      }));
+      if (!text && images.length === 0) return;
       // prompt()는 전체 런이 끝날 때까지 resolve되지 않으므로 await하지 않는다
-      session.prompt(text, options).catch((err) => {
-        sendTo(ws, { type: "error", message: String(err instanceof Error ? err.message : err) });
-      });
+      session
+        .prompt(text, {
+          images: images.length > 0 ? images : undefined,
+          ...(session.isStreaming ? { streamingBehavior: "steer" as const } : {}),
+        })
+        .catch((err) => {
+          sendTo(ws, { type: "error", message: String(err instanceof Error ? err.message : err) });
+        });
       break;
     }
     case "abort":
@@ -154,6 +201,18 @@ async function handleCommand(cmd: ClientCommand, ws: WebSocket) {
       }
       await runtime.session.setModel(model);
       broadcastSnapshot();
+      break;
+    }
+    case "set_thinking_level":
+      session.setThinkingLevel(cmd.level);
+      broadcastSnapshot();
+      break;
+    case "fork": {
+      const result = await runtime.fork(cmd.entryId);
+      if (result.cancelled) return;
+      bindSession();
+      broadcastSnapshot();
+      sendTo(ws, { type: "forked", selectedText: result.selectedText });
       break;
     }
   }
@@ -203,8 +262,22 @@ const httpServer = createServer(async (req, res) => {
       res.writeHead(200, { "content-type": "application/json" });
       res.end(
         JSON.stringify(
-          models.map((m) => ({ provider: m.provider, id: m.id, name: (m as { name?: string }).name })),
+          models.map((m) => ({
+            provider: m.provider,
+            id: m.id,
+            name: (m as { name?: string }).name,
+            reasoning: (m as { reasoning?: boolean }).reasoning,
+          })),
         ),
+      );
+      return;
+    }
+
+    if (url.pathname === "/api/fork-points") {
+      const points = runtime.session.getUserMessagesForForking();
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(
+        JSON.stringify(points.map((p) => ({ entryId: p.entryId, text: p.text.slice(0, 200) }))),
       );
       return;
     }

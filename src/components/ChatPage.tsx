@@ -1,8 +1,11 @@
 import { useChat } from "../lib/chat";
 import { Composer } from "./Composer";
+import { ForkMenu } from "./ForkMenu";
 import { MessageList } from "./MessageList";
 import { ModelMenu } from "./ModelMenu";
 import { SessionsDrawer } from "./SessionsDrawer";
+import { ThemeToggle } from "./ThemeToggle";
+import { ThinkingMenu } from "./ThinkingMenu";
 
 export function ChatPage() {
   const { connected, snapshot, streamText, streamThinking, activeTools } = useChat();
@@ -10,7 +13,7 @@ export function ChatPage() {
 
   return (
     <div className="flex h-dvh flex-col">
-      <header className="flex items-center gap-2 border-b border-neutral-800 px-3 py-2 pt-[calc(0.5rem+env(safe-area-inset-top))]">
+      <header className="flex items-center gap-1.5 border-b border-neutral-200 px-3 py-2 pt-[calc(0.5rem+env(safe-area-inset-top))] dark:border-neutral-800">
         <SessionsDrawer currentSessionFile={snapshot?.sessionFile} />
         <div className="flex items-center gap-2">
           <span className="text-lg font-semibold">π</span>
@@ -20,7 +23,13 @@ export function ChatPage() {
           />
         </div>
         <div className="flex-1" />
+        <ThinkingMenu
+          current={snapshot?.thinkingLevel ?? "off"}
+          levels={snapshot?.thinkingLevels ?? ["off"]}
+        />
         <ModelMenu current={snapshot?.model ?? null} />
+        <ForkMenu />
+        <ThemeToggle />
       </header>
 
       <MessageList

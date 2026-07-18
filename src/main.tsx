@@ -10,6 +10,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ChatPage } from "./components/ChatPage";
 import { chatClient } from "./lib/chat";
+import { initTheme } from "./lib/theme";
 import "./styles.css";
 
 const rootRoute = createRootRoute({
@@ -32,6 +33,7 @@ declare module "@tanstack/react-router" {
 
 const queryClient = new QueryClient();
 
+initTheme();
 chatClient.connect();
 
 createRoot(document.getElementById("root")!).render(

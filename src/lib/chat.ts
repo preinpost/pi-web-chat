@@ -13,6 +13,8 @@ export interface ChatState {
   streamText: string;
   streamThinking: string;
   activeTools: ActiveTool[];
+  /** fork 직후 composer에 주입할 텍스트 (소비 후 clear) */
+  injectText: string | null;
 }
 
 const initialState: ChatState = {
@@ -21,6 +23,7 @@ const initialState: ChatState = {
   streamText: "",
   streamThinking: "",
   activeTools: [],
+  injectText: null,
 };
 
 class ChatClient {
@@ -95,10 +98,17 @@ class ChatClient {
       case "agent_end":
         this.update({ activeTools: [], streamText: "", streamThinking: "" });
         break;
+      case "forked":
+        if (event.selectedText) this.update({ injectText: event.selectedText });
+        break;
       case "error":
         console.error("[pi-web]", event.message);
         break;
     }
+  }
+
+  consumeInjectText() {
+    if (this.state.injectText !== null) this.update({ injectText: null });
   }
 
   private update(partial: Partial<ChatState>) {
