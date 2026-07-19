@@ -1,6 +1,8 @@
 import { useChat } from "../lib/chat";
+import { requestOpenSessionsDrawer } from "../lib/drawer";
 import { useT } from "../lib/i18n";
 import { useSidebarPinned } from "../lib/sidebar";
+import { useLeftEdgeSwipe } from "../lib/useEdgeSwipe";
 import { Composer } from "./Composer";
 import { MessageList } from "./MessageList";
 import { ModelMenu } from "./ModelMenu";
@@ -39,6 +41,12 @@ export function ChatPage() {
   const isStreaming = snapshot?.isStreaming ?? false;
   const sidebarPinned = useSidebarPinned();
   const showConnectingOverlay = connection !== "connected" && !snapshot;
+
+  // 왼쪽 가장자리 → 오른쪽 스와이프로 세션 드로어 열기 (고정 사이드바 아닐 때)
+  useLeftEdgeSwipe({
+    enabled: !sidebarPinned,
+    onSwipeRight: requestOpenSessionsDrawer,
+  });
 
   // #root is the flex/dvh shell; fill it (no position:fixed — iOS 26 safe).
   return (

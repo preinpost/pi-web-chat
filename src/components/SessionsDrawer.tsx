@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { UISessionInfo } from "../../shared/protocol";
 import { useInvalidateSessions, useSessions } from "../lib/api";
 import { chatClient, useChat } from "../lib/chat";
+import { onRequestOpenSessionsDrawer } from "../lib/drawer";
 import { localeTag, useLocale, useT } from "../lib/i18n";
 import { setSidebarPinned, useSidebarPinned } from "../lib/sidebar";
 
@@ -238,6 +239,15 @@ export function SessionsDrawer({ currentSessionFile }: { currentSessionFile?: st
     setSidebarPinned(true);
     setOpen(false);
   };
+
+  // 엣지 스와이프 등 외부 요청으로 드로어 열기
+  useEffect(() => {
+    return onRequestOpenSessionsDrawer(() => {
+      if (sidebarPinned) return; // 고정 사이드바 상태면 무시
+      setInstantHide(false);
+      setOpen(true);
+    });
+  }, [sidebarPinned]);
 
   return (
     <Dialog.Root
